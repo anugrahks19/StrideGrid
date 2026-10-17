@@ -10,13 +10,20 @@ test('cell projection round trips to bounds', () => {
   assert.ok(bounds[0][1] <= point.lng && point.lng <= bounds[1][1]);
 });
 
-test('a route crosses multiple cells', () => {
+test('territory visits follow GPS samples without filling a gap between them', () => {
   const points = [
     { lat: 9.9312, lng: 76.2673 },
     { lat: 9.9312, lng: 76.2743 },
   ];
   assert.ok(distanceMeters(points[0], points[1]) > 700);
-  assert.ok(routeCells(points).length > 3);
+  const cells = routeCells(points);
+  assert.equal(cells.length, 2);
+  assert.deepEqual(cells.map(({ key }) => key), points.map((point) => pointToCell(point).key));
+  for (const cell of cells) {
+    const bounds = cellBounds(cell.x, cell.y);
+    assert.ok(bounds[0][0] <= cell.lat && cell.lat <= bounds[1][0]);
+    assert.ok(bounds[0][1] <= cell.lng && cell.lng <= bounds[1][1]);
+  }
 });
 
 test('run validation accepts a plausible kilometer and filters one GPS jump', () => {

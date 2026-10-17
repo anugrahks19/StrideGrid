@@ -63,10 +63,10 @@ export default function Dashboard({ user, territories, leaders, runs, activity, 
   const bars = weeklyBars(runs);
   const maxBar = Math.max(1000, ...bars.map((bar) => bar.meters));
   const firstCell = territories.find((cell) => cell.owner?.id === user.id) || territories[0];
-  const mapCenter = firstCell ? [
+  const mapCenter = firstCell?.marker || (firstCell ? [
     (firstCell.bounds[0][0] + firstCell.bounds[1][0]) / 2,
     (firstCell.bounds[0][1] + firstCell.bounds[1][1]) / 2,
-  ] : null;
+  ] : null);
 
   return <div className="dashboard page-container">
     <div className="dashboard-heading">

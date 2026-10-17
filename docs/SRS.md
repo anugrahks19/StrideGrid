@@ -22,9 +22,9 @@ The first version targets individual runners in one local area. It is a course p
 | US-02 | As a runner, I want to start and finish a run so that I can claim ground. | Location permission is requested only after Start. The page displays GPS sample count and accuracy. A qualifying submitted run appears in My Runs without manual refresh. |
 | US-03 | As a runner, I want invalid routes rejected so that the game is fairer. | Short, inaccurate, badly ordered, or repeatedly implausible routes return a clear 400 response and do not score. Exact duplicate submissions return 409. |
 | US-04 | As a runner, I want to contest a rival cell so that I can capture it. | First valid visit starts a seven-day challenge; a later visit by the same challenger captures it; an owner visit during the window clears the challenge. |
-| US-05 | As a runner, I want to see my ground on a map. | Own, rival, and contested cells use distinct colors. An empty map remains usable. The map works on phone and desktop widths. |
+| US-05 | As a runner, I want to see my ground on a map. | Own, rival, and contested cells use distinct compact markers anchored to coarse measured locations; unsampled gaps do not paint across water. An empty map remains usable. The map works on phone and desktop widths. |
 | US-06 | As a runner, I want a leaderboard so that I can compare progress. | Ranking counts currently owned cells and updates after a completed scoring run. Empty state is shown before any run. |
-| US-07 | As a runner, I want my route private. | Public endpoints return cell bounds and names, never raw run samples. My Runs requires a valid session and returns only that user's records. |
+| US-07 | As a runner, I want my route private. | Public endpoints return cell bounds, coarse marker positions, and names, never raw run samples. My Runs requires a valid session and returns only that user's records. |
 | US-08 | As a returning runner, I want a dashboard so that I can understand my progress immediately. | Sign-in and registration lead to `/dashboard`. It shows owned and contested cells, distance, rank, recent runs, and a territory map. An unsigned visitor is redirected to sign-in. |
 | US-09 | As a runner, I want current game activity without reloading. | Completed runs publish a server event. Open dashboard data refreshes after the event, and a periodic refresh keeps it current if the stream disconnects. |
 
@@ -36,12 +36,12 @@ The first version targets individual runners in one local area. It is a course p
 4. The API shall reject exact route replay and routes that fail minimum duration, distance, accuracy, ordering, or plausible-speed checks.
 5. The server shall calculate visited cells and apply claim, challenge, defense, and capture rules.
 6. The UI shall show loading, success, empty, and error states for remote data.
-7. The system shall expose only public cell geometry and runner names in map and leaderboard responses.
+7. The system shall expose only public cell geometry, coarse marker positions, and runner names in map and leaderboard responses.
 
 ## 5. Non-functional requirements
 
 - **Security:** hash passwords; keep the JWT secret and MongoDB URI out of Git; rate-limit auth routes; validate body size and GPS input.
-- **Privacy:** limit public location data to territory cells; never display another runner's precise route. Use non-personal demo accounts and routes for screenshots.
+- **Privacy:** limit public location data to territory cells and coarse 25-meter marker positions; never display another runner's full precise route. Use non-personal demo accounts and routes for screenshots.
 - **Usability:** clear mobile navigation and labeled inputs; map color differences accompanied by a legend; readable errors and retry controls.
 - **Compatibility:** modern mobile browsers with Geolocation support. The app requires HTTPS in production.
 - **Maintainability:** separate React UI, API routes, Mongoose models, and pure game-rule functions.

@@ -31,23 +31,33 @@ export function cellBounds(x, y) {
   ];
 }
 
+function coarseMarker(point) {
+  const x = WEB_MERCATOR_RADIUS * point.lng * Math.PI / 180;
+  const y = WEB_MERCATOR_RADIUS * Math.log(Math.tan(Math.PI / 4 + point.lat * Math.PI / 360));
+  const snap = (meters) => Math.floor(meters / 25) * 25 + 12.5;
+  return {
+    lat: (2 * Math.atan(Math.exp(snap(y) / WEB_MERCATOR_RADIUS)) - Math.PI / 2) * 180 / Math.PI,
+    lng: snap(x) / WEB_MERCATOR_RADIUS * 180 / Math.PI,
+  };
+}
+
 export function routeCells(points) {
   const travelByCell = new Map();
   for (let i = 1; i < points.length; i += 1) {
     const start = points[i - 1];
     const end = points[i];
     const segment = distanceMeters(start, end);
-    const steps = Math.max(1, Math.ceil(segment / 20));
-    for (let step = 0; step < steps; step += 1) {
-      const t = (step + 0.5) / steps;
-      const cell = pointToCell({
-        lat: start.lat + (end.lat - start.lat) * t,
-        lng: start.lng + (end.lng - start.lng) * t,
-      });
+    // Score the measured locations, not the straight line between them. A sparse
+    // GPS segment may cross a river even when the runner took a nearby bridge.
+    for (const point of [start, end]) {
+      const cell = pointToCell(point);
+      const marker = coarseMarker(point);
       const previous = travelByCell.get(cell.key);
       travelByCell.set(cell.key, {
         ...cell,
-        meters: (previous?.meters || 0) + segment / steps,
+        meters: (previous?.meters || 0) + segment / 2,
+        lat: marker.lat,
+        lng: marker.lng,
       });
     }
   }

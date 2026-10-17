@@ -73,21 +73,31 @@ function SectionHeading({ eyebrow, title, aside }) {
   return <div className="section-heading"><div><span className="eyebrow">{eyebrow}</span><h2>{title}</h2></div>{aside}</div>;
 }
 
-function Overview({ user, territories, leaders, runs, loading, error, live, onRetry }) {
+function Overview({ user, territories, leaders, runs, activity, loading, error, live, onRetry }) {
   const mine = territories.filter((cell) => cell.owner?.id === user?.id).length;
   const defending = territories.filter((cell) => cell.owner?.id === user?.id && cell.challenger && new Date(cell.challengeExpiresAt) > new Date()).length;
   const totalDistance = runs.reduce((sum, run) => sum + run.distanceMeters, 0);
   return <>
-    <section className="hero"><div className="hero-grid"><div className="hero-copy">
-      <div className="hero-tag"><span className="pulse-dot" /> A LITTLE ADVENTURE OUTSIDE</div>
-      <h1>Run your route.<br /><em>Own the ground.</em></h1>
-      <p>Make your usual route feel brand new. Explore nearby streets, collect little pieces of the map, and enjoy the miles in between.</p>
-      <div className="hero-actions">
-        <Link className="button button-primary" to={user ? '/explore' : '/register'}>{user ? 'Explore your grid' : 'Start claiming ground'} <ArrowRight size={19} /></Link>
-        <Link className="text-link" to="/leaderboard">See the leaderboard <ArrowUpRight size={17} /></Link>
+    <section className="landing-hero"><div className="landing-hero-inner">
+      <img className="landing-hero-photo" src="/images/hero-runners.png" alt="Three runners sharing a morning run on a tree-lined street" />
+      <div className="landing-hero-shade" />
+      <div className="landing-hero-copy">
+        <span className="landing-kicker"><span className="landing-kicker-dot" /> YOUR CITY IS THE COURSE</span>
+        <h1>Run the city.<br /><em>Make it yours.</em></h1>
+        <p>Turn a real run into territory on a shared map. Discover new streets, challenge friends, and watch your city change one route at a time.</p>
+        <div className="landing-hero-actions">
+          <Link className="button landing-primary" to={user ? '/explore' : '/register'}>{user ? 'Explore your grid' : 'Start running'} <ArrowRight size={18} /></Link>
+          <Link className="landing-secondary" to="/leaderboard">See the leaderboard <ArrowUpRight size={17} /></Link>
+        </div>
+        <div className="landing-hero-foot"><Footprints size={17} /> Real runs. Real streets. Your story on the map.</div>
       </div>
-      <div className="hero-proof"><Footprints size={17} /><span>Go at your pace. There’s always more to explore.</span></div>
-    </div><div className="hero-art" aria-hidden="true"><div className="hero-orbit orbit-one" /><div className="hero-orbit orbit-two" /><div className="hero-route"><span /><span /><span /><span /><span /></div><div className="hero-pin pin-one"><Flag size={17}/></div><div className="hero-pin pin-two"><Footprints size={17}/></div><div className="hero-art-card"><span>NEW TERRITORY</span><strong>+ 1 GRID</strong><small>Route completed</small></div><div className="hero-grid-lines" /></div></div></section>
+      <div className="landing-live-card" aria-live="polite">
+        <div className="landing-live-top"><span className={live ? 'landing-live-dot connected' : 'landing-live-dot'} /> {live ? 'LIVE MAP' : 'MAP CONNECTING'} <Flag size={17} /></div>
+        <strong>{territories.length}</strong>
+        <span>territory spots on the map</span>
+        <small>{activity.length ? `Latest run: ${activity[0].runner}` : 'Be the first to make a move.'}</small>
+      </div>
+    </div></section>
     {error && <div className="page-container"><div className="notice error">{error} <button onClick={onRetry}>Retry</button></div></div>}
     <section className="stats-section page-container"><div className="stats-intro"><span className="eyebrow">YOUR LITTLE CORNER OF THE MAP</span><h2>Every run adds up.</h2><p>{user ? `Welcome back, ${user.name.split(' ')[0]}. Here's what your routes have built so far.` : 'Create an account and start turning your routes into a story on the map.'}</p></div><div className="metrics-grid">
       <Metric icon={Flag} label="Your territory" value={user ? mine : '—'} detail="grid cells owned" tone="mint" />
@@ -148,6 +158,12 @@ function Explore({ user, territories, refresh }) {
         lat: position.coords.latitude, lng: position.coords.longitude,
         accuracy: position.coords.accuracy, timestamp: position.timestamp,
       };
+      if (!Number.isFinite(point.accuracy) || point.accuracy > 50) {
+        setMessage(Number.isFinite(point.accuracy)
+          ? `GPS accuracy is ±${Math.round(point.accuracy)} m. Waiting for a clearer signal before drawing your route.`
+          : 'Waiting for a GPS reading with a reliable accuracy estimate.');
+        return;
+      }
       const last = pointsRef.current.at(-1);
       if (!last || point.timestamp > last.timestamp) {
         pointsRef.current = [...pointsRef.current, point];
@@ -172,12 +188,12 @@ function Explore({ user, territories, refresh }) {
   const mine = territories.filter((cell) => cell.owner?.id === user?.id).length;
   const contested = territories.filter((cell) => cell.challenger && new Date(cell.challengeExpiresAt) > new Date()).length;
   const firstCell = territories.find((cell) => cell.owner?.id === user?.id) || territories[0];
-  const mapCenter = center || (firstCell ? [
+  const mapCenter = center || firstCell?.marker || (firstCell ? [
     (firstCell.bounds[0][0] + firstCell.bounds[1][0]) / 2,
     (firstCell.bounds[0][1] + firstCell.bounds[1][1]) / 2,
   ] : null);
   return <div className="inner-page page-container"><div className="page-title-row"><div><span className="eyebrow">THE PLAYING FIELD</span><h1>Explore the grid<span>.</span></h1><p>See who owns the ground, then get out and change it.</p></div><button className="button button-outline" onClick={locate}><LocateFixed size={18} /> My location</button></div>
-    {message && <div className="notice error">{message}</div>}
+    {message && <div className={active ? 'notice info' : 'notice error'}>{message}</div>}
     {result && <div className="notice success"><Check size={19} /> Run saved! {result.counts.claimed} claimed · {result.counts.contested} contested · {result.counts.captured} captured · {result.counts.defended} defended</div>}
     <div className="explore-layout"><div className="explore-map-panel"><TerritoryMap territories={territories} points={points} center={mapCenter} userId={user?.id} height="590px" /><div className="map-legend"><span><i className="legend-mine" /> Your cells</span><span><i className="legend-others" /> Other runners</span><span><i className="legend-contested" /> Contested</span></div></div>
       <aside className="explore-sidebar"><div className="sidebar-heading"><span className="eyebrow">RUN CONTROL</span><h2>Make your move.</h2><p>Keep this page open while you run. Qualifying runs need at least 1 km and 8 minutes.</p></div>
@@ -185,7 +201,7 @@ function Explore({ user, territories, refresh }) {
           {active ? <button className="button button-stop" onClick={finishRun} disabled={submitting}><Square size={17} fill="currentColor" /> Finish run</button> : <button className="button button-primary full" onClick={startRun} disabled={submitting}><Play size={17} fill="currentColor" /> {submitting ? 'Saving run…' : 'Start run'}</button>}
           <span className="run-help">{active ? 'Move outdoors with a clear GPS signal.' : 'Location permission is requested when you start.'}</span>
         </div><div className="sidebar-stats"><div><Flag size={18}/><span>Your territory</span><strong>{user ? mine : '—'}</strong></div><div><Swords size={18}/><span>Contested cells</span><strong>{contested}</strong></div></div>
-        <div className="privacy-card"><Shield size={19} /><div><strong>Your routes stay private.</strong><p>Other runners see territory cells, not your exact GPS trail.</p></div></div>
+        <div className="privacy-card"><Shield size={19} /><div><strong>Your routes stay private.</strong><p>Other runners see coarse territory spots, not your exact GPS trail.</p></div></div>
       </aside></div></div>;
 }
 
@@ -270,7 +286,7 @@ export default function App() {
     setUser(null); setRuns([]); navigate('/');
   };
   return <Shell user={user} onLogout={handleLogout}><Routes>
-    <Route path="/" element={authLoading ? <div className="page-container inner-page">Loading your space…</div> : user ? <Navigate to="/dashboard" replace /> : <Overview user={user} territories={territories} leaders={leaders} runs={runs} loading={loading} error={error} live={live} onRetry={() => refresh()} />} />
+    <Route path="/" element={authLoading ? <div className="page-container inner-page">Loading your space…</div> : user ? <Navigate to="/dashboard" replace /> : <Overview user={user} territories={territories} leaders={leaders} runs={runs} activity={activity} loading={loading} error={error} live={live} onRetry={() => refresh()} />} />
     <Route path="/dashboard" element={authLoading ? <div className="page-container inner-page">Loading your space…</div> : user ? <Dashboard user={user} territories={territories} leaders={leaders} runs={runs} activity={activity} loading={loading} error={error} live={live} onRetry={() => refresh()} /> : <Navigate to="/login" replace />} />
     <Route path="/explore" element={<Explore user={user} territories={territories} refresh={() => refresh()} />} />
     <Route path="/leaderboard" element={<Leaderboard leaders={leaders} loading={loading} error={error} onRetry={() => refresh()} user={user} />} />

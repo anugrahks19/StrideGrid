@@ -18,7 +18,7 @@ async function applyVisit(cell, runnerId, now) {
     if (transition.action === 'unchanged') return transition.action;
     if (!current) {
       try {
-        await Territory.create({ key: cell.key, x: cell.x, y: cell.y, ...transition, action: undefined });
+        await Territory.create({ key: cell.key, x: cell.x, y: cell.y, markerLat: cell.lat, markerLng: cell.lng, ...transition, action: undefined });
         return transition.action;
       } catch (error) {
         if (error.code === 11000) continue;
@@ -42,6 +42,8 @@ router.get('/territories', async (req, res, next) => {
     res.json({ territories: docs.map((doc) => ({
       key: doc.key,
       bounds: cellBounds(doc.x, doc.y),
+      marker: Number.isFinite(doc.markerLat) && Number.isFinite(doc.markerLng)
+        ? [doc.markerLat, doc.markerLng] : null,
       owner: doc.owner ? { id: doc.owner.id, name: doc.owner.name } : null,
       challenger: doc.challenger ? { id: doc.challenger.id, name: doc.challenger.name } : null,
       challengeExpiresAt: doc.challengeExpiresAt,

@@ -125,6 +125,7 @@ h1, h2, h3 { color: #203b31; letter-spacing: -.052em; }
 .notice { border-radius: 12px; border: 1px solid transparent; }
 .notice.error { background: #fff5ee; color: #9d6751; border-color: #f4e4d9; }
 .notice.success { background: #edf6e8; color: #4f7d4d; border-color: #dcebd4; }
+.notice.info { background: #eff5ee; color: #53705d; border-color: #dde9da; }
 
 .stats-section {
   grid-template-columns: 33% 67%;

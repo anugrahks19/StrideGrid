@@ -17,13 +17,13 @@ The game, data, API, and user interface are MERN. Leaflet displays the map; it i
 ## MVP rules
 
 1. A run needs at least five samples, eight minutes, and one kilometer. Samples with poor accuracy are excluded; implausible GPS jumps are rejected or filtered.
-2. The route is divided into 150-meter projected grid cells. A cell counts when the accepted route covers at least 35 meters inside it. A run can affect at most 30 cells.
+2. Accepted GPS samples are assigned to 150-meter projected grid cells. A cell counts after at least 35 meters of measured travel is attributed to its samples. The server does not fill unsampled straight-line gaps, which could cross water. A run can affect at most 30 cells.
 3. The first runner to visit an unowned cell claims it.
 4. Visiting a rival's cell starts a seven-day challenge. A second qualifying run through that cell by the same challenger captures it.
 5. The owner can defend a contested cell by running through it during the challenge period.
 6. The leaderboard ranks runners by currently owned cells.
 
-These checks reduce GPS mistakes and basic replay attempts; they do not prove that a person physically ran. Exact routes are private to the runner. Other users see claimed cells and public names.
+The tracker waits for GPS readings accurate to 50 meters or better and avoids drawing lines through long gaps. These checks reduce GPS mistakes and basic replay attempts; they do not prove that a person physically ran or verify that every point is on land. Exact routes are private to the runner. Other users see compact territory markers snapped to 25-meter positions, cell bounds, and public names.
 
 ## Run locally
 
@@ -90,6 +90,7 @@ Unit tests cover map cell conversion, route coverage, plausible and implausible 
 ## Privacy and limitations
 
 - The application stores raw GPS samples to audit a runner's own run. The public API never returns those points.
+- Territory markers use coarse locations derived from accepted samples. They do not reveal the complete GPS trail, but they still indicate where a runner has been; obtain consent before using this app for real-world tracking.
 - GPS location can be spoofed; this is an academic MVP, not a prize-bearing competition.
 - The browser must stay open during a run. Reliable background tracking would require a separate native app.
 - A run updates several territory documents. Those updates are not yet one atomic transaction, so an interrupted write may leave a partial result. This is the main correctness improvement before a large launch.
