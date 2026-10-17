@@ -92,6 +92,26 @@ function Overview({ territories, error, live, onRetry }) {
       </div>
     </div></section>
     {error && <div className="page-container"><div className="notice error">{error} <button onClick={onRetry}>Retry</button></div></div>}
+    <section className="landing-reasons page-container">
+      <div className="landing-reasons-heading">
+        <div><span className="eyebrow">MORE THAN A RUN LOG</span><h2>A little reason to go the long way.</h2></div>
+        <p>StrideGrid makes ordinary outdoor runs feel like a shared adventure, without turning them into a race.</p>
+      </div>
+      <div className="landing-reasons-grid">
+        <article className="landing-reason-card reason-explore">
+          <div className="reason-visual" aria-hidden="true"><span className="reason-grid" /><svg viewBox="0 0 190 88"><path d="M10 70 C42 70 34 18 77 24 S112 78 145 44 S165 25 183 22" /></svg><span className="reason-icon"><Compass size={23} /></span></div>
+          <span className="reason-label">GO EXPLORE</span><h3>Take the interesting turn.</h3><p>Familiar streets become places worth noticing. Try a new route and see where it leads.</p>
+        </article>
+        <article className="landing-reason-card reason-pace">
+          <div className="reason-visual" aria-hidden="true"><span className="reason-steps"><Footprints size={31} /><Footprints size={31} /><Footprints size={31} /></span></div>
+          <span className="reason-label">YOUR OWN PACE</span><h3>Run for the feeling.</h3><p>There’s no speed ranking to chase. Show up, move outdoors, and make the route yours.</p>
+        </article>
+        <article className="landing-reason-card reason-together">
+          <div className="reason-visual" aria-hidden="true"><span className="reason-node node-one"><Flag size={19} /></span><span className="reason-connector" /><span className="reason-node node-two"><Swords size={19} /></span></div>
+          <span className="reason-label">BETTER TOGETHER</span><h3>Make the city a game.</h3><p>See the shared map change, challenge a territory, and return to defend your corner.</p>
+        </article>
+      </div>
+    </section>
     <section className="feature-section page-container"><SectionHeading eyebrow="HOW IT WORKS" title="A map that moves with you." aside={<Link className="section-link" to="/explore">Explore the map <ArrowUpRight size={17} /></Link>} />
       <div className="feature-layout"><div className="feature-map"><TerritoryMap territories={territories} height="380px" /><div className="map-corner-label"><span className="live-dot" /> {live ? 'LIVE TERRITORY MAP' : 'TERRITORY MAP'}</div></div><div className="feature-list">
         <div className="feature-item"><span className="feature-number">01</span><div><h3>Claim new ground</h3><p>Complete a qualifying run to mark unowned grid cells as yours.</p></div><Flag size={23} /></div>
