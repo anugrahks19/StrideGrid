@@ -222,6 +222,12 @@ h1, h2, h3 { color: #203b31; letter-spacing: -.052em; }
 .auth-form-wrap label { color: #53725a; }
 .auth-form-wrap input { border-color: #e2e9dd; border-radius: 11px; padding: 14px 15px; background: #fff; }
 .auth-form-wrap input:focus { border-color: #98bd8c; box-shadow: 0 0 0 4px #b5d4a344; }
+.auth-form-wrap input[aria-invalid="true"] { border-color: #cc7d69; }
+.password-field { position: relative; display: block; }
+.password-field input { padding-right: 48px; }
+.password-toggle { position: absolute; right: 5px; top: 50%; transform: translateY(-50%); width: 39px; height: 39px; display: grid; place-items: center; border: 0; border-radius: 8px; background: transparent; color: #719078; }
+.password-toggle:hover, .password-toggle:focus-visible { background: #eef5e9; color: #315d3e; }
+.session-notice { margin: 18px 0 0; }
 .auth-switch a { color: #52805b; }
 @keyframes card-float { 0%, 100% { transform: rotate(2deg) translateY(0); } 50% { transform: rotate(1deg) translateY(-7px); } }
 @keyframes trail-glow { 0%, 100% { opacity: .65; } 50% { opacity: 1; } }

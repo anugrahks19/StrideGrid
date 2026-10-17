@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Link, NavLink, Navigate, Route, Routes, useNavigate } from 'react-router-dom';
+import { Link, NavLink, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import {
   ArrowRight, ArrowUpRight, Check, ChevronRight, Compass, Flag, Footprints,
-  Layers3, LocateFixed, LogOut, MapPin, Menu, Play, Shield, Square, Swords, Timer, Trophy, X,
+  Eye, EyeOff, Layers3, LocateFixed, LogOut, Menu, Play, Shield, Square, Swords, Timer, Trophy, X,
 } from 'lucide-react';
 import { api } from './api';
 import TerritoryMap from './components/TerritoryMap';
@@ -38,7 +38,7 @@ function Brand() {
   </Link>;
 }
 
-function Shell({ user, onLogout, children }) {
+function Shell({ user, authLoading, onLogout, logoutError, children }) {
   const [menuOpen, setMenuOpen] = useState(false);
   return <div className="app-shell">
     <header className="site-header">
@@ -52,7 +52,7 @@ function Shell({ user, onLogout, children }) {
           {user && <button className="mobile-logout" onClick={() => { setMenuOpen(false); onLogout(); }}><LogOut size={17} /> Sign out</button>}
         </nav>
         <div className="header-actions">
-          {user ? <>
+          {authLoading ? null : user ? <>
             <span className="user-chip"><span>{user.name.charAt(0).toUpperCase()}</span>{user.name}</span>
             <button className="icon-button logout-button" title="Sign out" onClick={onLogout}><LogOut size={18} /></button>
           </> : <Link to="/login" className="header-login">Sign in <ArrowUpRight size={16} /></Link>}
@@ -60,7 +60,7 @@ function Shell({ user, onLogout, children }) {
         </div>
       </div>
     </header>
-    <main>{children}</main>
+    <main>{logoutError && <div className="page-container"><div className="notice error session-notice" role="alert">{logoutError}</div></div>}{children}</main>
     <footer className="site-footer"><div className="footer-inner"><Brand /><span>Every route has a story. Make yours count.</span><span>© {new Date().getFullYear()} StrideGrid</span></div></footer>
   </div>;
 }
@@ -136,6 +136,7 @@ function Explore({ user, territories, refresh }) {
   const pointsRef = useRef([]);
   const startedAtRef = useRef(null);
   const navigate = useNavigate();
+  const location = useLocation();
 
   const stopWatching = useCallback(() => {
     if (watchRef.current !== null) navigator.geolocation.clearWatch(watchRef.current);
@@ -158,7 +159,7 @@ function Explore({ user, territories, refresh }) {
     );
   };
   const startRun = () => {
-    if (!user) return navigate('/login');
+    if (!user) return navigate('/login', { state: { from: location.pathname } });
     if (!navigator.geolocation) return setMessage('This browser does not support location tracking.');
     setPoints([]); pointsRef.current = []; startedAtRef.current = Date.now(); setElapsed(0); setResult(null); setMessage('Waiting for your first GPS point…');
     watchRef.current = navigator.geolocation.watchPosition((position) => {
@@ -220,41 +221,52 @@ function Leaderboard({ leaders, loading, error, onRetry, user }) {
     </div><div className="leaderboard-footnote"><Flag size={17} /> Rankings count currently owned territory cells.</div></div>;
 }
 
-function Runs({ user, runs, loading, error, onRetry }) {
-  if (!user) return <AuthPrompt />;
+function Runs({ runs, loading, error, onRetry }) {
   return <div className="inner-page page-container narrow-page"><div className="page-title-row"><div><span className="eyebrow">YOUR JOURNEY</span><h1>My runs<span>.</span></h1><p>Every route you’ve put on the map, all in one place.</p></div><Link to="/explore" className="button button-primary"><Play size={16} fill="currentColor" /> New run</Link></div>
     {loading ? <div className="empty-state panel">Loading your runs…</div> : error ? <div className="notice error">{error} <button onClick={onRetry}>Retry</button></div> : runs.length ? <div className="runs-list">{runs.map((run) => <div className="run-card" key={run._id}><div className="run-card-icon"><Footprints size={24}/></div><div className="run-card-main"><span>{formatDate(run.startedAt)}</span><h3>{formatDistance(run.distanceMeters)} run</h3><small><Timer size={14}/>{formatDuration(run.durationSeconds)} · {run.claimedCount} claimed · {run.capturedCount} captured · {run.defendedCount} defended</small></div><ChevronRight size={18}/></div>)}</div> : <div className="empty-state panel"><Footprints size={36}/><h3>Your first run is waiting.</h3><p>Head to the map, hit start, and claim your first grid.</p><Link to="/explore" className="button button-primary">Explore the map <ArrowRight size={17}/></Link></div>}</div>;
 }
 
-function AuthPrompt() { return <div className="inner-page page-container"><div className="empty-state panel"><MapPin size={36}/><h2>Sign in to see your journey.</h2><p>Your runs and territory are saved to your account.</p><Link className="button button-primary" to="/login">Sign in <ArrowRight size={17}/></Link></div></div>; }
-
-function AuthPage({ mode, onAuth }) {
-  const [form, setForm] = useState({ name: '', email: '', password: '' });
+function AuthPage({ mode }) {
+  const [form, setForm] = useState({ name: '', email: '', password: '', confirmPassword: '' });
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
-  const navigate = useNavigate();
+  const [showPassword, setShowPassword] = useState(false);
+  const location = useLocation();
   const isRegister = mode === 'register';
+  const destination = typeof location.state?.from === 'string' && location.state.from.startsWith('/') && !location.state.from.startsWith('//')
+    ? location.state.from : '/dashboard';
+  const update = (field) => (event) => { setForm((current) => ({ ...current, [field]: event.target.value })); setError(''); };
   const submit = async (event) => {
-    event.preventDefault(); setError(''); setBusy(true);
+    event.preventDefault();
+    if (busy) return;
+    if (isRegister && form.password !== form.confirmPassword) {
+      setError('Passwords do not match. Please try again.');
+      return;
+    }
+    setError(''); setBusy(true);
     try {
-      const data = await api(`/auth/${mode}`, { method: 'POST', body: JSON.stringify(form) });
-      onAuth(data.user); navigate('/dashboard');
+      await api(`/auth/${mode}`, { method: 'POST', body: JSON.stringify({
+        ...(isRegister ? { name: form.name.trim() } : {}), email: form.email.trim(), password: form.password,
+      }) });
+      window.location.replace(destination);
     } catch (caught) { setError(caught.message); }
     finally { setBusy(false); }
   };
   return <div className="auth-page"><div className="auth-side"><div className="auth-side-content"><span className="eyebrow">A DIFFERENT WAY TO RUN</span><h2>Every street<br />is a <em>start line.</em></h2><p>Lace up. Go further. Make the map yours.</p></div><div className="auth-side-grid" /></div><div className="auth-form-side"><div className="auth-form-wrap"><span className="eyebrow">WELCOME TO STRIDEGRID</span><h1>{isRegister ? 'Create your account.' : 'Good to see you again.'}</h1><p>{isRegister ? 'Your next run could change the map.' : 'Sign in to pick up where you left off.'}</p>
-      {error && <div className="notice error">{error}</div>}
-      <form onSubmit={submit}>{isRegister && <label>Full name<input required minLength="2" maxLength="40" autoComplete="name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Your name" /></label>}
-        <label>Email address<input required type="email" autoComplete="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="you@example.com" /></label>
-        <label>Password<input required type="password" minLength={isRegister ? 8 : undefined} autoComplete={isRegister ? 'new-password' : 'current-password'} value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} placeholder={isRegister ? 'At least 8 characters' : 'Your password'} /></label>
+      {error && <div className="notice error" role="alert">{error}</div>}
+      <form onSubmit={submit}>{isRegister && <label>Full name<input required minLength="2" maxLength="40" autoComplete="name" value={form.name} onChange={update('name')} placeholder="Your name" /></label>}
+        <label>Email address<input required type="email" autoComplete="email" value={form.email} onChange={update('email')} placeholder="you@example.com" /></label>
+        <label>Password<span className="password-field"><input required type={showPassword ? 'text' : 'password'} minLength={isRegister ? 8 : undefined} autoComplete={isRegister ? 'new-password' : 'current-password'} value={form.password} onChange={update('password')} placeholder={isRegister ? 'At least 8 characters' : 'Your password'} /><button type="button" className="password-toggle" onClick={() => setShowPassword((shown) => !shown)} aria-label={showPassword ? 'Hide password' : 'Show password'}>{showPassword ? <EyeOff size={18}/> : <Eye size={18}/>}</button></span></label>
+        {isRegister && <label>Confirm password<input required type={showPassword ? 'text' : 'password'} autoComplete="new-password" value={form.confirmPassword} onChange={update('confirmPassword')} aria-invalid={Boolean(error && form.password !== form.confirmPassword)} placeholder="Enter password again" /></label>}
         <button className="button button-primary full" disabled={busy}>{busy ? 'Please wait…' : isRegister ? 'Create account' : 'Sign in'} <ArrowRight size={18}/></button>
-      </form><div className="auth-switch">{isRegister ? 'Already have an account?' : 'New to StrideGrid?'} <Link to={isRegister ? '/login' : '/register'}>{isRegister ? 'Sign in' : 'Create an account'}</Link></div>
+      </form><div className="auth-switch">{isRegister ? 'Already have an account?' : 'New to StrideGrid?'} <Link to={isRegister ? '/login' : '/register'} state={{ from: destination }}>{isRegister ? 'Sign in' : 'Create an account'}</Link></div>
     </div></div></div>;
 }
 
 export default function App() {
   const [user, setUser] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
+  const [logoutError, setLogoutError] = useState('');
   const [territories, setTerritories] = useState([]);
   const [leaders, setLeaders] = useState([]);
   const [runs, setRuns] = useState([]);
@@ -262,7 +274,7 @@ export default function App() {
   const [live, setLive] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const navigate = useNavigate();
+  const location = useLocation();
 
   const refresh = useCallback(async (activeUser = user, quiet = false) => {
     if (!quiet) { setLoading(true); setError(''); }
@@ -290,17 +302,20 @@ export default function App() {
     return () => { events.close(); clearInterval(polling); setLive(false); };
   }, [authLoading, user, refresh]);
   const handleLogout = async () => {
-    await api('/auth/logout', { method: 'POST' }).catch(() => {});
-    setUser(null); setRuns([]); navigate('/');
+    setLogoutError('');
+    try {
+      await api('/auth/logout', { method: 'POST' });
+      window.location.replace('/');
+    } catch (caught) { setLogoutError(`Could not sign out. ${caught.message}`); }
   };
-  return <Shell user={user} onLogout={handleLogout}><Routes>
+  return <Shell user={user} authLoading={authLoading} onLogout={handleLogout} logoutError={logoutError}><Routes>
     <Route path="/" element={authLoading ? <div className="page-container inner-page">Loading your space…</div> : user ? <Navigate to="/dashboard" replace /> : <Overview territories={territories} error={error} live={live} onRetry={() => refresh()} />} />
-    <Route path="/dashboard" element={authLoading ? <div className="page-container inner-page">Loading your space…</div> : user ? <Dashboard user={user} territories={territories} leaders={leaders} runs={runs} activity={activity} loading={loading} error={error} live={live} onRetry={() => refresh()} /> : <Navigate to="/login" replace />} />
+    <Route path="/dashboard" element={authLoading ? <div className="page-container inner-page">Loading your space…</div> : user ? <Dashboard user={user} territories={territories} leaders={leaders} runs={runs} activity={activity} loading={loading} error={error} live={live} onRetry={() => refresh()} /> : <Navigate to="/login" replace state={{ from: location.pathname }} />} />
     <Route path="/explore" element={<Explore user={user} territories={territories} refresh={() => refresh()} />} />
     <Route path="/leaderboard" element={<Leaderboard leaders={leaders} loading={loading} error={error} onRetry={() => refresh()} user={user} />} />
-    <Route path="/runs" element={<Runs user={user} runs={runs} loading={loading} error={error} onRetry={() => refresh()} />} />
-    <Route path="/login" element={user ? <Navigate to="/dashboard" replace /> : <AuthPage mode="login" onAuth={setUser} />} />
-    <Route path="/register" element={user ? <Navigate to="/dashboard" replace /> : <AuthPage mode="register" onAuth={setUser} />} />
+    <Route path="/runs" element={authLoading ? <div className="page-container inner-page">Loading your space…</div> : user ? <Runs runs={runs} loading={loading} error={error} onRetry={() => refresh()} /> : <Navigate to="/login" replace state={{ from: location.pathname }} />} />
+    <Route path="/login" element={authLoading ? <div className="page-container inner-page">Checking your session…</div> : user ? <Navigate to="/dashboard" replace /> : <AuthPage mode="login" />} />
+    <Route path="/register" element={authLoading ? <div className="page-container inner-page">Checking your session…</div> : user ? <Navigate to="/dashboard" replace /> : <AuthPage mode="register" />} />
     <Route path="*" element={<div className="inner-page page-container"><div className="empty-state panel"><Compass size={36}/><h2>That route doesn’t exist.</h2><Link to="/" className="button button-primary">Back home <ArrowRight size={17}/></Link></div></div>} />
   </Routes></Shell>;
 }
