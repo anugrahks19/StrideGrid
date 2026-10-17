@@ -1,0 +1,15 @@
+{
+  "name": "stridegrid",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "dev": "concurrently -k \"npm run dev --workspace server\" \"npm run dev --workspace client\"",
+    "build": "npm run build --workspace client",
+    "start": "npm run start --workspace server",
+    "test": "npm run test --workspace server"
+  },
+  "workspaces": ["client", "server"],
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
+}
