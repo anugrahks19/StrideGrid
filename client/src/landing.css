@@ -168,15 +168,16 @@
 
 .landing-live-card > strong {
   display: block;
-  margin: 11px 0 -2px;
+  margin: 15px 0 7px;
   font-family: 'Space Grotesk', sans-serif;
-  font-size: 43px;
-  line-height: 1;
-  letter-spacing: -.06em;
+  font-size: 25px;
+  line-height: 1.12;
+  letter-spacing: -.05em;
 }
 
-.landing-live-card > span { display: block; color: #56735e; font-size: 11px; font-weight: 700; }
-.landing-live-card > small { display: block; margin-top: 13px; padding-top: 10px; border-top: 1px solid #e6eee3; color: #8a9b8b; font-size: 10px; line-height: 1.45; }
+.landing-live-card > span { display: block; color: #708775; font-size: 11px; line-height: 1.5; }
+.landing-live-card > a { display: flex; align-items: center; justify-content: space-between; margin-top: 13px; padding-top: 10px; border-top: 1px solid #e6eee3; color: #3e7050; font-size: 11px; font-weight: 800; }
+.landing-live-card > a:hover { color: #214b35; }
 
 .territory-marker { filter: drop-shadow(0 3px 5px #24473170); transition: fill .3s ease, r .3s ease; }
 .territory-marker:hover { filter: drop-shadow(0 4px 9px #244731aa); }
@@ -210,9 +211,9 @@
   .landing-secondary { font-size: 11px; }
   .landing-hero-foot { margin-top: 26px; font-size: 10px; }
   .landing-live-card { top: 18px; right: 17px; bottom: auto; width: 174px; padding: 12px 14px 14px; }
-  .landing-live-card > strong { font-size: 31px; margin-top: 8px; }
-  .landing-live-card > span, .landing-live-card > small { font-size: 9px; }
-  .landing-live-card > small { margin-top: 7px; padding-top: 7px; }
+  .landing-live-card > strong { font-size: 20px; margin-top: 10px; }
+  .landing-live-card > span, .landing-live-card > a { font-size: 9px; }
+  .landing-live-card > a { margin-top: 9px; padding-top: 8px; }
 }
 
 @media (max-width: 420px) {

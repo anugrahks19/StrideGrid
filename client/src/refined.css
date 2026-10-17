@@ -127,29 +127,6 @@ h1, h2, h3 { color: #203b31; letter-spacing: -.052em; }
 .notice.success { background: #edf6e8; color: #4f7d4d; border-color: #dcebd4; }
 .notice.info { background: #eff5ee; color: #53705d; border-color: #dde9da; }
 
-.stats-section {
-  grid-template-columns: 33% 67%;
-  padding-top: 45px;
-  padding-bottom: 110px;
-}
-.stats-intro h2 { font-size: 33px; margin: 13px 0 12px; }
-.stats-intro p { color: #87948a; }
-.metrics-grid { gap: 13px; }
-.metric-card, .metric-card.mint, .metric-card.peach {
-  min-height: 167px;
-  background: #fff;
-  border: 1px solid #e9ebe3;
-  border-radius: 18px;
-  box-shadow: 0 8px 25px #28463108;
-  padding: 20px;
-}
-.metric-card.mint { background: #f0f6ec; border-color: #e6eee0; }
-.metric-card.peach { background: #fcf1e8; border-color: #f7e9df; }
-.metric-top { color: #78877a; }
-.metric-top svg { color: #8cab80; }
-.metric-card strong { font-size: 32px; color: #294c39; }
-.metric-card small { color: #929e93; }
-
 .feature-section { padding-bottom: 104px; }
 .section-heading { margin-bottom: 27px; }
 .section-heading h2 { font-size: 35px; margin-top: 10px; }
@@ -254,7 +231,6 @@ h1, h2, h3 { color: #203b31; letter-spacing: -.052em; }
   .hero-grid { grid-template-columns: 55% 45%; }
   .hero-copy { padding-right: 20px; }
   .hero-art { margin-right: 0; }
-  .stats-section { grid-template-columns: 1fr; }
   .feature-layout { grid-template-columns: 1fr 1fr; }
 }
 
@@ -272,9 +248,6 @@ h1, h2, h3 { color: #203b31; letter-spacing: -.052em; }
   .hero-art-card { right: 14px; bottom: 13px; }
   .pin-one { top: 42px; right: 45px; }
   .pin-two { bottom: 45px; left: 42px; }
-  .stats-section { padding-top: 32px; padding-bottom: 78px; }
-  .metrics-grid { grid-template-columns: repeat(2, 1fr); }
-  .metric-card { min-height: 148px; }
   .feature-section { padding-bottom: 75px; }
   .section-heading { flex-direction: column; align-items: flex-start; gap: 11px; }
   .section-link { padding-bottom: 0; }
@@ -290,8 +263,6 @@ h1, h2, h3 { color: #203b31; letter-spacing: -.052em; }
 @media (max-width: 420px) {
   .hero-actions { align-items: stretch; }
   .hero-actions .button { width: 100%; }
-  .metrics-grid { grid-template-columns: 1fr; }
-  .metric-card:last-child { grid-column: auto; }
 }
 @media (prefers-reduced-motion: reduce) {
   .hero-art-card, .hero-route span, .hero-pin { animation: none; }

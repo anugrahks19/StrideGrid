@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, NavLink, Navigate, Route, Routes, useNavigate } from 'react-router-dom';
 import {
-  Activity, ArrowRight, ArrowUpRight, Check, ChevronRight, Compass, Flag, Footprints,
+  ArrowRight, ArrowUpRight, Check, ChevronRight, Compass, Flag, Footprints,
   Layers3, LocateFixed, LogOut, MapPin, Menu, Play, Shield, Square, Swords, Timer, Trophy, X,
 } from 'lucide-react';
 import { api } from './api';
@@ -65,18 +65,11 @@ function Shell({ user, onLogout, children }) {
   </div>;
 }
 
-function Metric({ icon: Icon, label, value, detail, tone = '' }) {
-  return <div className={`metric-card ${tone}`}><div className="metric-top"><span>{label}</span><Icon size={19} /></div><strong>{value}</strong><small>{detail}</small></div>;
-}
-
 function SectionHeading({ eyebrow, title, aside }) {
   return <div className="section-heading"><div><span className="eyebrow">{eyebrow}</span><h2>{title}</h2></div>{aside}</div>;
 }
 
-function Overview({ user, territories, leaders, runs, activity, loading, error, live, onRetry }) {
-  const mine = territories.filter((cell) => cell.owner?.id === user?.id).length;
-  const defending = territories.filter((cell) => cell.owner?.id === user?.id && cell.challenger && new Date(cell.challengeExpiresAt) > new Date()).length;
-  const totalDistance = runs.reduce((sum, run) => sum + run.distanceMeters, 0);
+function Overview({ territories, error, live, onRetry }) {
   return <>
     <section className="landing-hero"><div className="landing-hero-inner">
       <img className="landing-hero-photo" src="/images/hero-runners.png" alt="Three runners sharing a morning run on a tree-lined street" />
@@ -86,33 +79,28 @@ function Overview({ user, territories, leaders, runs, activity, loading, error, 
         <h1>Run the city.<br /><em>Make it yours.</em></h1>
         <p>Turn a real run into territory on a shared map. Discover new streets, challenge friends, and watch your city change one route at a time.</p>
         <div className="landing-hero-actions">
-          <Link className="button landing-primary" to={user ? '/explore' : '/register'}>{user ? 'Explore your grid' : 'Start running'} <ArrowRight size={18} /></Link>
+          <Link className="button landing-primary" to="/register">Start running <ArrowRight size={18} /></Link>
           <Link className="landing-secondary" to="/leaderboard">See the leaderboard <ArrowUpRight size={17} /></Link>
         </div>
         <div className="landing-hero-foot"><Footprints size={17} /> Real runs. Real streets. Your story on the map.</div>
       </div>
       <div className="landing-live-card" aria-live="polite">
         <div className="landing-live-top"><span className={live ? 'landing-live-dot connected' : 'landing-live-dot'} /> {live ? 'LIVE MAP' : 'MAP CONNECTING'} <Flag size={17} /></div>
-        <strong>{territories.length}</strong>
-        <span>territory spots on the map</span>
-        <small>{activity.length ? `Latest run: ${activity[0].runner}` : 'Be the first to make a move.'}</small>
+        <strong>Explore your city.</strong>
+        <span>See the territory map change as runners finish.</span>
+        <Link to="/explore">Open live map <ArrowUpRight size={15} /></Link>
       </div>
     </div></section>
     {error && <div className="page-container"><div className="notice error">{error} <button onClick={onRetry}>Retry</button></div></div>}
-    <section className="stats-section page-container"><div className="stats-intro"><span className="eyebrow">YOUR LITTLE CORNER OF THE MAP</span><h2>Every run adds up.</h2><p>{user ? `Welcome back, ${user.name.split(' ')[0]}. Here's what your routes have built so far.` : 'Create an account and start turning your routes into a story on the map.'}</p></div><div className="metrics-grid">
-      <Metric icon={Flag} label="Your territory" value={user ? mine : '—'} detail="grid cells owned" tone="mint" />
-      <Metric icon={Activity} label="Distance logged" value={user ? formatDistance(totalDistance) : '—'} detail="across qualifying runs" />
-      <Metric icon={Shield} label="Needs defending" value={user ? defending : '—'} detail="contested cells" tone="peach" />
-    </div></section>
     <section className="feature-section page-container"><SectionHeading eyebrow="HOW IT WORKS" title="A map that moves with you." aside={<Link className="section-link" to="/explore">Explore the map <ArrowUpRight size={17} /></Link>} />
-      <div className="feature-layout"><div className="feature-map"><TerritoryMap territories={territories} userId={user?.id} height="380px" /><div className="map-corner-label"><span className="live-dot" /> {live ? 'LIVE TERRITORY MAP' : 'TERRITORY MAP'}</div></div><div className="feature-list">
+      <div className="feature-layout"><div className="feature-map"><TerritoryMap territories={territories} height="380px" /><div className="map-corner-label"><span className="live-dot" /> {live ? 'LIVE TERRITORY MAP' : 'TERRITORY MAP'}</div></div><div className="feature-list">
         <div className="feature-item"><span className="feature-number">01</span><div><h3>Claim new ground</h3><p>Complete a qualifying run to mark unowned grid cells as yours.</p></div><Flag size={23} /></div>
         <div className="feature-item"><span className="feature-number">02</span><div><h3>Challenge the field</h3><p>Run through another runner’s cell to start a seven-day challenge.</p></div><Swords size={23} /></div>
         <div className="feature-item"><span className="feature-number">03</span><div><h3>Defend your grid</h3><p>Return to contested ground before the challenge ends to keep it.</p></div><Shield size={23} /></div>
         <Link to="/explore" className="feature-bottom-link">Explore the territory map <ArrowRight size={17} /></Link>
       </div></div>
     </section>
-    <section className="bottom-cta"><div className="page-container bottom-cta-inner"><div><span className="eyebrow">READY WHEN YOU ARE</span><h2>See where a run takes you.</h2><p>One run is all it takes to get on the map.</p></div><Link to={user ? '/explore' : '/register'} className="button button-light">{user ? 'Start a run' : 'Create your account'} <ArrowRight size={18} /></Link></div></section>
+    <section className="bottom-cta"><div className="page-container bottom-cta-inner"><div><span className="eyebrow">READY WHEN YOU ARE</span><h2>See where a run takes you.</h2><p>One run is all it takes to get on the map.</p></div><Link to="/register" className="button button-light">Create your account <ArrowRight size={18} /></Link></div></section>
   </>;
 }
 
@@ -286,7 +274,7 @@ export default function App() {
     setUser(null); setRuns([]); navigate('/');
   };
   return <Shell user={user} onLogout={handleLogout}><Routes>
-    <Route path="/" element={authLoading ? <div className="page-container inner-page">Loading your space…</div> : user ? <Navigate to="/dashboard" replace /> : <Overview user={user} territories={territories} leaders={leaders} runs={runs} activity={activity} loading={loading} error={error} live={live} onRetry={() => refresh()} />} />
+    <Route path="/" element={authLoading ? <div className="page-container inner-page">Loading your space…</div> : user ? <Navigate to="/dashboard" replace /> : <Overview territories={territories} error={error} live={live} onRetry={() => refresh()} />} />
     <Route path="/dashboard" element={authLoading ? <div className="page-container inner-page">Loading your space…</div> : user ? <Dashboard user={user} territories={territories} leaders={leaders} runs={runs} activity={activity} loading={loading} error={error} live={live} onRetry={() => refresh()} /> : <Navigate to="/login" replace />} />
     <Route path="/explore" element={<Explore user={user} territories={territories} refresh={() => refresh()} />} />
     <Route path="/leaderboard" element={<Leaderboard leaders={leaders} loading={loading} error={error} onRetry={() => refresh()} user={user} />} />

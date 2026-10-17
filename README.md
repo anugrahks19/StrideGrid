@@ -2,6 +2,8 @@
 
 StrideGrid is a MERN capstone project that turns outdoor runs into a territory game. Runners record a GPS route in a mobile browser, claim unowned map cells, challenge another runner's cells, defend their own cells, and compare territory on a leaderboard.
 
+The public landing page introduces the game and its live map. Personal territory, distance, and defense statistics appear after sign-in on the dashboard.
+
 **Current status:** The first playable version and signed-in dashboard are implemented. Local development can run without an external MongoDB service; production needs a MongoDB connection and a real outdoor GPS test. No hosted URL or public GitHub repository has been created yet.
 
 ## Stack
