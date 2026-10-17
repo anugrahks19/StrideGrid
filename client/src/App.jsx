@@ -61,22 +61,22 @@ function Overview({ user, territories, leaders, runs, loading, error, onRetry })
   const totalDistance = runs.reduce((sum, run) => sum + run.distanceMeters, 0);
   return <>
     <section className="hero"><div className="hero-grid"><div className="hero-copy">
-      <div className="hero-tag"><span className="pulse-dot" /> THE CITY IS YOUR PLAYGROUND</div>
+      <div className="hero-tag"><span className="pulse-dot" /> A LITTLE ADVENTURE OUTSIDE</div>
       <h1>Run your route.<br /><em>Own the ground.</em></h1>
-      <p>Turn every run into territory. Discover your city, defend your grid, and make each kilometer count.</p>
+      <p>Make your usual route feel brand new. Explore nearby streets, collect little pieces of the map, and enjoy the miles in between.</p>
       <div className="hero-actions">
         <Link className="button button-primary" to={user ? '/explore' : '/register'}>{user ? 'Explore your grid' : 'Start claiming ground'} <ArrowRight size={19} /></Link>
         <Link className="text-link" to="/leaderboard">See the leaderboard <ArrowUpRight size={17} /></Link>
       </div>
-      <div className="hero-proof"><div className="proof-avatars"><span>R</span><span>K</span><span>A</span></div><span>Find your line. Own your place.</span></div>
+      <div className="hero-proof"><Footprints size={17} /><span>Go at your pace. There’s always more to explore.</span></div>
     </div><div className="hero-art" aria-hidden="true"><div className="hero-orbit orbit-one" /><div className="hero-orbit orbit-two" /><div className="hero-route"><span /><span /><span /><span /><span /></div><div className="hero-pin pin-one"><Flag size={17}/></div><div className="hero-pin pin-two"><Footprints size={17}/></div><div className="hero-art-card"><span>NEW TERRITORY</span><strong>+ 1 GRID</strong><small>Route completed</small></div><div className="hero-grid-lines" /></div></div></section>
     {error && <div className="page-container"><div className="notice error">{error} <button onClick={onRetry}>Retry</button></div></div>}
-    <section className="stats-section page-container"><div className="stats-intro"><span className="eyebrow">YOUR RUNNING WORLD</span><h2>A little progress<br />goes a long way.</h2><p>{user ? `Welcome back, ${user.name.split(' ')[0]}. Here's what your routes have built so far.` : 'Create an account and start turning your routes into a story on the map.'}</p></div><div className="metrics-grid">
+    <section className="stats-section page-container"><div className="stats-intro"><span className="eyebrow">YOUR LITTLE CORNER OF THE MAP</span><h2>Every run adds up.</h2><p>{user ? `Welcome back, ${user.name.split(' ')[0]}. Here's what your routes have built so far.` : 'Create an account and start turning your routes into a story on the map.'}</p></div><div className="metrics-grid">
       <Metric icon={Flag} label="Your territory" value={user ? mine : '—'} detail="grid cells owned" tone="mint" />
       <Metric icon={Activity} label="Distance logged" value={user ? formatDistance(totalDistance) : '—'} detail="across qualifying runs" />
       <Metric icon={Shield} label="Needs defending" value={user ? defending : '—'} detail="contested cells" tone="peach" />
     </div></section>
-    <section className="feature-section page-container"><SectionHeading eyebrow="THE GAME, AT A GLANCE" title="Every stride changes the map." aside={<Link className="section-link" to="/explore">Open map <ArrowUpRight size={17} /></Link>} />
+    <section className="feature-section page-container"><SectionHeading eyebrow="HOW IT WORKS" title="A map that moves with you." aside={<Link className="section-link" to="/explore">Explore the map <ArrowUpRight size={17} /></Link>} />
       <div className="feature-layout"><div className="feature-map"><TerritoryMap territories={territories} userId={user?.id} height="380px" /><div className="map-corner-label"><span className="live-dot" /> LIVE TERRITORY MAP</div></div><div className="feature-list">
         <div className="feature-item"><span className="feature-number">01</span><div><h3>Claim new ground</h3><p>Complete a qualifying run to mark unowned grid cells as yours.</p></div><Flag size={23} /></div>
         <div className="feature-item"><span className="feature-number">02</span><div><h3>Challenge the field</h3><p>Run through another runner’s cell to start a seven-day challenge.</p></div><Swords size={23} /></div>
@@ -84,7 +84,7 @@ function Overview({ user, territories, leaders, runs, loading, error, onRetry })
         <Link to="/explore" className="feature-bottom-link">Explore the territory map <ArrowRight size={17} /></Link>
       </div></div>
     </section>
-    <section className="bottom-cta"><div className="page-container bottom-cta-inner"><div><span className="eyebrow">READY WHEN YOU ARE</span><h2>The next grid is yours.</h2><p>One run is all it takes to get on the map.</p></div><Link to={user ? '/explore' : '/register'} className="button button-light">{user ? 'Start a run' : 'Create your account'} <ArrowRight size={18} /></Link></div></section>
+    <section className="bottom-cta"><div className="page-container bottom-cta-inner"><div><span className="eyebrow">READY WHEN YOU ARE</span><h2>See where a run takes you.</h2><p>One run is all it takes to get on the map.</p></div><Link to={user ? '/explore' : '/register'} className="button button-light">{user ? 'Start a run' : 'Create your account'} <ArrowRight size={18} /></Link></div></section>
   </>;
 }
 

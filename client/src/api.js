@@ -12,6 +12,8 @@ export async function api(path, options = {}) {
     throw new Error('Could not connect to StrideGrid. Check your connection and try again.');
   }
   const data = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(data.error || 'Something went wrong. Please try again.');
+  if (!response.ok) throw new Error(data.error || (response.status >= 500
+    ? 'Live data is unavailable right now.'
+    : 'Something went wrong. Please try again.'));
   return data;
 }
