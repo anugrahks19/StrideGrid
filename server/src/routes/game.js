@@ -6,8 +6,10 @@ import User from '../models/User.js';
 import { requireAuth } from '../middleware/auth.js';
 import { cellBounds, routeCells, validateRun } from '../lib/geo.js';
 import { nextTerritory } from '../lib/territory.js';
+import { announceRun, liveEvents } from '../lib/live.js';
 
 const router = Router();
+router.get('/events', liveEvents);
 
 async function applyVisit(cell, runnerId, now) {
   for (let attempt = 0; attempt < 5; attempt += 1) {
@@ -61,6 +63,24 @@ router.get('/leaderboard', async (_req, res, next) => {
   } catch (error) { next(error); }
 });
 
+router.get('/activity', async (_req, res, next) => {
+  try {
+    const runs = await Run.find({ status: 'completed' })
+      .sort({ endedAt: -1 }).limit(8)
+      .select('runner claimedCount contestedCount capturedCount defendedCount endedAt')
+      .populate('runner', 'name');
+    res.json({ activity: runs.map((run) => ({
+      id: run.id,
+      runner: run.runner?.name || 'Runner',
+      claimed: run.claimedCount,
+      contested: run.contestedCount,
+      captured: run.capturedCount,
+      defended: run.defendedCount,
+      at: run.endedAt,
+    })) });
+  } catch (error) { next(error); }
+});
+
 router.get('/runs', requireAuth, async (req, res, next) => {
   try {
     const runs = await Run.find({ runner: req.user._id, status: 'completed' }).sort({ startedAt: -1 }).limit(30);
@@ -105,6 +125,7 @@ router.post('/runs', requireAuth, async (req, res, next) => {
       defendedCount: counts.defended,
     });
     await run.save();
+    announceRun();
     return res.status(201).json({ run: {
       id: run.id,
       distanceMeters: run.distanceMeters,

@@ -1,12 +1,14 @@
 import { useEffect } from 'react';
-import { MapContainer, TileLayer, Rectangle, Polyline, CircleMarker, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Rectangle, Polyline, CircleMarker, Tooltip, useMap } from 'react-leaflet';
 
 const DEFAULT_CENTER = [9.9312, 76.2673];
 const TILE_URL = import.meta.env.VITE_TILE_URL || 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
 
 function MapFocus({ center }) {
   const map = useMap();
-  useEffect(() => { if (center) map.flyTo(center, 15, { duration: 1 }); }, [center, map]);
+  const latitude = center?.[0];
+  const longitude = center?.[1];
+  useEffect(() => { if (latitude !== undefined && longitude !== undefined) map.flyTo([latitude, longitude], 15, { duration: 1 }); }, [latitude, longitude, map]);
   return null;
 }
 
@@ -27,7 +29,7 @@ export default function TerritoryMap({ territories = [], points = [], center, us
           return <Rectangle key={cell.key} bounds={cell.bounds} pathOptions={{
             color, weight: contested ? 2.4 : 1.5, fillColor: color, fillOpacity: 0.46,
             dashArray: contested ? '5 4' : undefined,
-          }} />;
+          }}><Tooltip direction="top" sticky>{isMine ? 'Your territory' : `${cell.owner?.name || 'Runner'}’s territory`}{contested ? ` · challenged by ${cell.challenger.name}` : ''}</Tooltip></Rectangle>;
         })}
         {route.length > 1 && <Polyline positions={route} pathOptions={{ color: '#f3a56e', weight: 5, opacity: 0.95 }} />}
         {route.length > 0 && <CircleMarker center={route.at(-1)} radius={8} pathOptions={{

@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Link, NavLink, Route, Routes, useNavigate } from 'react-router-dom';
+import { Link, NavLink, Navigate, Route, Routes, useNavigate } from 'react-router-dom';
 import {
   Activity, ArrowRight, ArrowUpRight, Check, ChevronRight, Compass, Flag, Footprints,
   Layers3, LocateFixed, LogOut, MapPin, Menu, Play, Shield, Square, Swords, Timer, Trophy, X,
 } from 'lucide-react';
 import { api } from './api';
 import TerritoryMap from './components/TerritoryMap';
+import Dashboard from './Dashboard';
 
 function formatDistance(meters) { return `${(meters / 1000).toFixed(2)} km`; }
 function formatDuration(seconds) {
@@ -13,6 +14,22 @@ function formatDuration(seconds) {
   return `${minutes}:${String(seconds % 60).padStart(2, '0')}`;
 }
 function formatDate(value) { return new Date(value).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }); }
+function trackDistance(points) {
+  const radians = Math.PI / 180;
+  let total = 0;
+  for (let i = 1; i < points.length; i += 1) {
+    const a = points[i - 1];
+    const b = points[i];
+    if (a.accuracy > 50 || b.accuracy > 50) continue;
+    const dLat = (b.lat - a.lat) * radians;
+    const dLng = (b.lng - a.lng) * radians;
+    const h = Math.sin(dLat / 2) ** 2 + Math.cos(a.lat * radians) * Math.cos(b.lat * radians) * Math.sin(dLng / 2) ** 2;
+    const segment = 2 * 6371000 * Math.asin(Math.min(1, Math.sqrt(h)));
+    const seconds = (b.timestamp - a.timestamp) / 1000;
+    if (seconds > 0 && segment / seconds <= 7.5) total += segment;
+  }
+  return total;
+}
 
 function Brand() {
   return <Link to="/" className="brand" aria-label="StrideGrid home">
@@ -28,10 +45,11 @@ function Shell({ user, onLogout, children }) {
       <div className="header-inner">
         <Brand />
         <nav className={menuOpen ? 'main-nav open' : 'main-nav'} aria-label="Main navigation">
-          <NavLink to="/" end onClick={() => setMenuOpen(false)}>Overview</NavLink>
+          <NavLink to={user ? '/dashboard' : '/'} end onClick={() => setMenuOpen(false)}>{user ? 'Dashboard' : 'Overview'}</NavLink>
           <NavLink to="/explore" onClick={() => setMenuOpen(false)}>Explore map</NavLink>
           <NavLink to="/leaderboard" onClick={() => setMenuOpen(false)}>Leaderboard</NavLink>
           {user && <NavLink to="/runs" onClick={() => setMenuOpen(false)}>My runs</NavLink>}
+          {user && <button className="mobile-logout" onClick={() => { setMenuOpen(false); onLogout(); }}><LogOut size={17} /> Sign out</button>}
         </nav>
         <div className="header-actions">
           {user ? <>
@@ -55,7 +73,7 @@ function SectionHeading({ eyebrow, title, aside }) {
   return <div className="section-heading"><div><span className="eyebrow">{eyebrow}</span><h2>{title}</h2></div>{aside}</div>;
 }
 
-function Overview({ user, territories, leaders, runs, loading, error, onRetry }) {
+function Overview({ user, territories, leaders, runs, loading, error, live, onRetry }) {
   const mine = territories.filter((cell) => cell.owner?.id === user?.id).length;
   const defending = territories.filter((cell) => cell.owner?.id === user?.id && cell.challenger && new Date(cell.challengeExpiresAt) > new Date()).length;
   const totalDistance = runs.reduce((sum, run) => sum + run.distanceMeters, 0);
@@ -77,7 +95,7 @@ function Overview({ user, territories, leaders, runs, loading, error, onRetry })
       <Metric icon={Shield} label="Needs defending" value={user ? defending : '—'} detail="contested cells" tone="peach" />
     </div></section>
     <section className="feature-section page-container"><SectionHeading eyebrow="HOW IT WORKS" title="A map that moves with you." aside={<Link className="section-link" to="/explore">Explore the map <ArrowUpRight size={17} /></Link>} />
-      <div className="feature-layout"><div className="feature-map"><TerritoryMap territories={territories} userId={user?.id} height="380px" /><div className="map-corner-label"><span className="live-dot" /> LIVE TERRITORY MAP</div></div><div className="feature-list">
+      <div className="feature-layout"><div className="feature-map"><TerritoryMap territories={territories} userId={user?.id} height="380px" /><div className="map-corner-label"><span className="live-dot" /> {live ? 'LIVE TERRITORY MAP' : 'TERRITORY MAP'}</div></div><div className="feature-list">
         <div className="feature-item"><span className="feature-number">01</span><div><h3>Claim new ground</h3><p>Complete a qualifying run to mark unowned grid cells as yours.</p></div><Flag size={23} /></div>
         <div className="feature-item"><span className="feature-number">02</span><div><h3>Challenge the field</h3><p>Run through another runner’s cell to start a seven-day challenge.</p></div><Swords size={23} /></div>
         <div className="feature-item"><span className="feature-number">03</span><div><h3>Defend your grid</h3><p>Return to contested ground before the challenge ends to keep it.</p></div><Shield size={23} /></div>
@@ -95,8 +113,10 @@ function Explore({ user, territories, refresh }) {
   const [message, setMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState(null);
+  const [elapsed, setElapsed] = useState(0);
   const watchRef = useRef(null);
   const pointsRef = useRef([]);
+  const startedAtRef = useRef(null);
   const navigate = useNavigate();
 
   const stopWatching = useCallback(() => {
@@ -104,6 +124,12 @@ function Explore({ user, territories, refresh }) {
     watchRef.current = null;
   }, []);
   useEffect(() => () => stopWatching(), [stopWatching]);
+  useEffect(() => {
+    if (!active) return undefined;
+    const tick = () => setElapsed(Math.floor((Date.now() - startedAtRef.current) / 1000));
+    const interval = setInterval(tick, 1000);
+    return () => clearInterval(interval);
+  }, [active]);
 
   const locate = () => {
     if (!navigator.geolocation) return setMessage('This browser does not support location tracking.');
@@ -116,7 +142,7 @@ function Explore({ user, territories, refresh }) {
   const startRun = () => {
     if (!user) return navigate('/login');
     if (!navigator.geolocation) return setMessage('This browser does not support location tracking.');
-    setPoints([]); pointsRef.current = []; setResult(null); setMessage('Waiting for your first GPS point…');
+    setPoints([]); pointsRef.current = []; startedAtRef.current = Date.now(); setElapsed(0); setResult(null); setMessage('Waiting for your first GPS point…');
     watchRef.current = navigator.geolocation.watchPosition((position) => {
       const point = {
         lat: position.coords.latitude, lng: position.coords.longitude,
@@ -145,12 +171,17 @@ function Explore({ user, territories, refresh }) {
   };
   const mine = territories.filter((cell) => cell.owner?.id === user?.id).length;
   const contested = territories.filter((cell) => cell.challenger && new Date(cell.challengeExpiresAt) > new Date()).length;
+  const firstCell = territories.find((cell) => cell.owner?.id === user?.id) || territories[0];
+  const mapCenter = center || (firstCell ? [
+    (firstCell.bounds[0][0] + firstCell.bounds[1][0]) / 2,
+    (firstCell.bounds[0][1] + firstCell.bounds[1][1]) / 2,
+  ] : null);
   return <div className="inner-page page-container"><div className="page-title-row"><div><span className="eyebrow">THE PLAYING FIELD</span><h1>Explore the grid<span>.</span></h1><p>See who owns the ground, then get out and change it.</p></div><button className="button button-outline" onClick={locate}><LocateFixed size={18} /> My location</button></div>
     {message && <div className="notice error">{message}</div>}
     {result && <div className="notice success"><Check size={19} /> Run saved! {result.counts.claimed} claimed · {result.counts.contested} contested · {result.counts.captured} captured · {result.counts.defended} defended</div>}
-    <div className="explore-layout"><div className="explore-map-panel"><TerritoryMap territories={territories} points={points} center={center} userId={user?.id} height="590px" /><div className="map-legend"><span><i className="legend-mine" /> Your cells</span><span><i className="legend-others" /> Other runners</span><span><i className="legend-contested" /> Contested</span></div></div>
+    <div className="explore-layout"><div className="explore-map-panel"><TerritoryMap territories={territories} points={points} center={mapCenter} userId={user?.id} height="590px" /><div className="map-legend"><span><i className="legend-mine" /> Your cells</span><span><i className="legend-others" /> Other runners</span><span><i className="legend-contested" /> Contested</span></div></div>
       <aside className="explore-sidebar"><div className="sidebar-heading"><span className="eyebrow">RUN CONTROL</span><h2>Make your move.</h2><p>Keep this page open while you run. Qualifying runs need at least 1 km and 8 minutes.</p></div>
-        <div className="run-panel"><div className="run-panel-top"><span className={active ? 'status-dot active' : 'status-dot'} />{active ? 'RUN IN PROGRESS' : 'READY TO RUN'}</div><div className="run-live-metric"><strong>{points.length}</strong><span>GPS points recorded</span></div>{points.length > 0 && <small className="accuracy-note">Latest accuracy: ±{Math.round(points.at(-1).accuracy)} m</small>}
+        <div className="run-panel"><div className="run-panel-top"><span className={active ? 'status-dot active' : 'status-dot'} />{active ? 'LIVE RUN IN PROGRESS' : 'READY TO RUN'}</div><div className="run-live-metric"><strong>{points.length}</strong><span>GPS points recorded</span></div>{active && <div className="tracker-live-stats"><span><Timer size={15} /> {formatDuration(elapsed)}</span><span><Footprints size={15} /> {formatDistance(trackDistance(points))}</span></div>}{points.length > 0 && <small className="accuracy-note">Latest accuracy: ±{Math.round(points.at(-1).accuracy)} m</small>}
           {active ? <button className="button button-stop" onClick={finishRun} disabled={submitting}><Square size={17} fill="currentColor" /> Finish run</button> : <button className="button button-primary full" onClick={startRun} disabled={submitting}><Play size={17} fill="currentColor" /> {submitting ? 'Saving run…' : 'Start run'}</button>}
           <span className="run-help">{active ? 'Move outdoors with a clear GPS signal.' : 'Location permission is requested when you start.'}</span>
         </div><div className="sidebar-stats"><div><Flag size={18}/><span>Your territory</span><strong>{user ? mine : '—'}</strong></div><div><Swords size={18}/><span>Contested cells</span><strong>{contested}</strong></div></div>
@@ -183,7 +214,7 @@ function AuthPage({ mode, onAuth }) {
     event.preventDefault(); setError(''); setBusy(true);
     try {
       const data = await api(`/auth/${mode}`, { method: 'POST', body: JSON.stringify(form) });
-      onAuth(data.user); navigate('/explore');
+      onAuth(data.user); navigate('/dashboard');
     } catch (caught) { setError(caught.message); }
     finally { setBusy(false); }
   };
@@ -203,35 +234,49 @@ export default function App() {
   const [territories, setTerritories] = useState([]);
   const [leaders, setLeaders] = useState([]);
   const [runs, setRuns] = useState([]);
+  const [activity, setActivity] = useState([]);
+  const [live, setLive] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const navigate = useNavigate();
 
-  const refresh = useCallback(async (activeUser = user) => {
-    setLoading(true); setError('');
+  const refresh = useCallback(async (activeUser = user, quiet = false) => {
+    if (!quiet) { setLoading(true); setError(''); }
     try {
-      const [territoryData, leaderData, runData] = await Promise.all([
-        api('/territories'), api('/leaderboard'), activeUser ? api('/runs') : Promise.resolve({ runs: [] }),
+      const [territoryData, leaderData, runData, activityData] = await Promise.all([
+        api('/territories'), api('/leaderboard'), activeUser ? api('/runs') : Promise.resolve({ runs: [] }), api('/activity'),
       ]);
-      setTerritories(territoryData.territories); setLeaders(leaderData.leaders); setRuns(runData.runs);
-    } catch (caught) { setError(caught.message); }
-    finally { setLoading(false); }
+      setTerritories(territoryData.territories); setLeaders(leaderData.leaders); setRuns(runData.runs); setActivity(activityData.activity);
+      setError('');
+    } catch (caught) { if (!quiet) setError(caught.message); }
+    finally { if (!quiet) setLoading(false); }
   }, [user]);
   useEffect(() => {
     api('/auth/me').then((data) => setUser(data.user)).catch(() => {}).finally(() => setAuthLoading(false));
   }, []);
   useEffect(() => { if (!authLoading) refresh(); }, [authLoading, user]);
+  useEffect(() => {
+    if (authLoading) return undefined;
+    const events = new EventSource('/api/events');
+    events.onopen = () => setLive(true);
+    events.onerror = () => setLive(false);
+    const update = () => refresh(user, true);
+    events.addEventListener('run-completed', update);
+    const polling = setInterval(update, 30_000);
+    return () => { events.close(); clearInterval(polling); setLive(false); };
+  }, [authLoading, user, refresh]);
   const handleLogout = async () => {
     await api('/auth/logout', { method: 'POST' }).catch(() => {});
     setUser(null); setRuns([]); navigate('/');
   };
   return <Shell user={user} onLogout={handleLogout}><Routes>
-    <Route path="/" element={<Overview user={user} territories={territories} leaders={leaders} runs={runs} loading={loading} error={error} onRetry={() => refresh()} />} />
+    <Route path="/" element={authLoading ? <div className="page-container inner-page">Loading your space…</div> : user ? <Navigate to="/dashboard" replace /> : <Overview user={user} territories={territories} leaders={leaders} runs={runs} loading={loading} error={error} live={live} onRetry={() => refresh()} />} />
+    <Route path="/dashboard" element={authLoading ? <div className="page-container inner-page">Loading your space…</div> : user ? <Dashboard user={user} territories={territories} leaders={leaders} runs={runs} activity={activity} loading={loading} error={error} live={live} onRetry={() => refresh()} /> : <Navigate to="/login" replace />} />
     <Route path="/explore" element={<Explore user={user} territories={territories} refresh={() => refresh()} />} />
     <Route path="/leaderboard" element={<Leaderboard leaders={leaders} loading={loading} error={error} onRetry={() => refresh()} user={user} />} />
     <Route path="/runs" element={<Runs user={user} runs={runs} loading={loading} error={error} onRetry={() => refresh()} />} />
-    <Route path="/login" element={<AuthPage mode="login" onAuth={setUser} />} />
-    <Route path="/register" element={<AuthPage mode="register" onAuth={setUser} />} />
+    <Route path="/login" element={user ? <Navigate to="/dashboard" replace /> : <AuthPage mode="login" onAuth={setUser} />} />
+    <Route path="/register" element={user ? <Navigate to="/dashboard" replace /> : <AuthPage mode="register" onAuth={setUser} />} />
     <Route path="*" element={<div className="inner-page page-container"><div className="empty-state panel"><Compass size={36}/><h2>That route doesn’t exist.</h2><Link to="/" className="button button-primary">Back home <ArrowRight size={17}/></Link></div></div>} />
   </Routes></Shell>;
 }

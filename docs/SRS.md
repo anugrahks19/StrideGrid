@@ -25,6 +25,8 @@ The first version targets individual runners in one local area. It is a course p
 | US-05 | As a runner, I want to see my ground on a map. | Own, rival, and contested cells use distinct colors. An empty map remains usable. The map works on phone and desktop widths. |
 | US-06 | As a runner, I want a leaderboard so that I can compare progress. | Ranking counts currently owned cells and updates after a completed scoring run. Empty state is shown before any run. |
 | US-07 | As a runner, I want my route private. | Public endpoints return cell bounds and names, never raw run samples. My Runs requires a valid session and returns only that user's records. |
+| US-08 | As a returning runner, I want a dashboard so that I can understand my progress immediately. | Sign-in and registration lead to `/dashboard`. It shows owned and contested cells, distance, rank, recent runs, and a territory map. An unsigned visitor is redirected to sign-in. |
+| US-09 | As a runner, I want current game activity without reloading. | Completed runs publish a server event. Open dashboard data refreshes after the event, and a periodic refresh keeps it current if the stream disconnects. |
 
 ## 4. Functional requirements
 
@@ -58,10 +60,11 @@ The first version targets individual runners in one local area. It is a course p
 2. Sign up and sign in
 3. Explore map with territory legend and run control
 4. Run result state
-5. Leaderboard
-6. My Runs history
+5. Signed-in dashboard with live map, stats, recent runs, and activity
+6. Leaderboard
+7. My Runs history
 
-Each screen will be checked at a mobile width and a desktop width. The main journey is: register → open map → start and finish a valid run → inspect claimed cells → see the updated leaderboard and run history.
+Each screen will be checked at a mobile width and a desktop width. The main journey is: register → dashboard → open map → start and finish a valid run → inspect claimed cells → see the updated dashboard, leaderboard, and run history. Completed runs publish a server event so open dashboards can refresh promptly, with periodic refresh as a fallback.
 
 ## 8. API contract
 

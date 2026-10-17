@@ -6,6 +6,8 @@ import helmet from 'helmet';
 import cors from 'cors';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { randomBytes } from 'node:crypto';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import authRoutes from './routes/auth.js';
 import gameRoutes from './routes/game.js';
 
@@ -33,13 +35,35 @@ app.use((error, _req, res, _next) => {
 });
 
 const port = Number(process.env.PORT) || 5000;
-if (!process.env.MONGODB_URI || !process.env.JWT_SECRET || process.env.JWT_SECRET.length < 24) {
-  console.error('Set MONGODB_URI and a JWT_SECRET of at least 24 characters.');
-  process.exit(1);
-}
-mongoose.connect(process.env.MONGODB_URI).then(() => {
+async function start() {
+  let mongoUri = process.env.MONGODB_URI;
+  if (process.env.NODE_ENV !== 'production' && !mongoUri) {
+    const localData = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../.local-data');
+    const mongoPath = path.join(localData, 'mongo');
+    await mkdir(mongoPath, { recursive: true });
+    if (!process.env.JWT_SECRET) {
+      const secretPath = path.join(localData, 'dev-jwt-secret');
+      try { process.env.JWT_SECRET = (await readFile(secretPath, 'utf8')).trim(); }
+      catch (error) {
+        if (error.code !== 'ENOENT') throw error;
+        process.env.JWT_SECRET = randomBytes(32).toString('hex');
+        await writeFile(secretPath, process.env.JWT_SECRET, { flag: 'wx' });
+      }
+    }
+    const { MongoMemoryServer } = await import('mongodb-memory-server-core');
+    const memoryDb = await MongoMemoryServer.create({ instance: { dbPath: mongoPath, storageEngine: 'wiredTiger' } });
+    mongoUri = memoryDb.getUri('stridegrid');
+    console.log('Using local MongoDB data in .local-data/mongo.');
+    process.on('SIGINT', async () => { await mongoose.disconnect(); await memoryDb.stop(); process.exit(0); });
+  }
+  if (!mongoUri || !process.env.JWT_SECRET || process.env.JWT_SECRET.length < 24) {
+    throw new Error('Set MONGODB_URI and a JWT_SECRET of at least 24 characters.');
+  }
+  await mongoose.connect(mongoUri);
   app.listen(port, () => console.log(`StrideGrid server listening on port ${port}`));
-}).catch((error) => {
+}
+
+start().catch((error) => {
   console.error('MongoDB connection failed:', error.message);
   process.exit(1);
 });

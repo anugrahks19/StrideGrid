@@ -2,7 +2,7 @@
 
 StrideGrid is a MERN capstone project that turns outdoor runs into a territory game. Runners record a GPS route in a mobile browser, claim unowned map cells, challenge another runner's cells, defend their own cells, and compare territory on a leaderboard.
 
-**Current status:** The first playable version is implemented. It needs a MongoDB connection and a real outdoor GPS test before deployment. No hosted URL or public GitHub repository has been created yet.
+**Current status:** The first playable version and signed-in dashboard are implemented. Local development can run without an external MongoDB service; production needs a MongoDB connection and a real outdoor GPS test. No hosted URL or public GitHub repository has been created yet.
 
 ## Stack
 
@@ -27,21 +27,19 @@ These checks reduce GPS mistakes and basic replay attempts; they do not prove th
 
 ## Run locally
 
-Requirements: Node.js, npm, and MongoDB (local or Atlas).
+Requirements: Node.js and npm. MongoDB is optional for local development: without `MONGODB_URI`, the server starts a local MongoDB instance and stores its data in the ignored `.local-data/` folder. The first run downloads a MongoDB binary, which can take a while.
 
 ```powershell
 npm install
-Copy-Item server/.env.example server/.env
-Copy-Item client/.env.example client/.env
-```
-
-Set `MONGODB_URI` in `server/.env`. Replace `JWT_SECRET` with a random secret of at least 24 characters. Then run:
-
-```powershell
 npm run dev
 ```
 
-Open `http://localhost:5173`. Vite proxies `/api` to Express on port 5000. The server won't start until the MongoDB connection and required environment variables are valid.
+Open `http://localhost:5173`. Vite proxies `/api` to Express on port 5000. For production, copy the example environment files, set `MONGODB_URI` in `server/.env`, and replace `JWT_SECRET` with a random secret of at least 24 characters.
+
+```powershell
+Copy-Item server/.env.example server/.env
+Copy-Item client/.env.example client/.env
+```
 
 To build for production:
 
@@ -62,16 +60,18 @@ In production Express serves the built React app from the same origin. Configure
 | GET | `/api/auth/me` | Current runner | Yes |
 | GET | `/api/territories` | Public territory cells | No |
 | GET | `/api/leaderboard` | Top ten by cells | No |
+| GET | `/api/activity` | Recent completed runs without private routes | No |
+| GET | `/api/events` | Live completed-run event stream | No |
 | GET | `/api/runs` | Current runner's completed runs | Yes |
 | POST | `/api/runs` | Submit, validate, and score a run | Yes |
 | GET | `/api/health` | API health | No |
 
-Successful run submission returns distance, duration, and counts of claimed, contested, captured, and defended cells. Validation errors return `400`; missing auth returns `401`; a duplicate route returns `409`.
+Successful run submission returns distance, duration, and counts of claimed, contested, captured, and defended cells. Validation errors return `400`; missing auth returns `401`; a duplicate route returns `409`. After sign-in, runners land on `/dashboard`. A completed run announces an event so open dashboards can refresh; a 30-second poll provides a fallback.
 
 ## Project structure
 
 ```text
-client/src/             React pages, map, and API client
+client/src/             React pages, dashboard, map, and API client
 server/src/models/      Mongoose schemas
 server/src/routes/      Authentication and game endpoints
 server/src/lib/         GPS validation, cell geometry, game rules
@@ -85,7 +85,7 @@ npm test
 npm run build
 ```
 
-Unit tests cover map cell conversion, route coverage, plausible and implausible GPS samples, and claim/challenge/defend/capture transitions. Before submission, test registration, login, a live outdoor run, route rejection, leaderboard updates, mobile layout, and deep-link refresh against a deployed MongoDB-backed version. Use two runner accounts for the challenge/defense demonstration.
+Unit tests cover map cell conversion, route coverage, plausible and implausible GPS samples, and claim/challenge/defend/capture transitions. Before submission, test registration, login, the dashboard, a live outdoor run, route rejection, live leaderboard updates, mobile layout, and deep-link refresh against a deployed MongoDB-backed version. Use two runner accounts for the challenge/defense demonstration.
 
 ## Privacy and limitations
 
