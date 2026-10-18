@@ -6,14 +6,14 @@ StrideGrid is a MERN capstone project that turns outdoor runs into a territory g
 
 The public landing page introduces the game through an animated feature section, a live map preview, and a clear start flow. Personal territory, distance, and defense statistics appear after sign-in on the dashboard.
 
-**Current status:** The first playable version and signed-in dashboard are implemented. Local development can run without an external MongoDB service; production needs a MongoDB connection and a real outdoor GPS test. No hosted URL or public GitHub repository has been created yet.
+**Current status:** The first playable version and signed-in dashboard are implemented. Local development can run without an external MongoDB service; production needs a MongoDB connection and a real outdoor GPS test. No hosted URL is available yet.
 
 ## Project links
 
 | Item | Link or status |
 | --- | --- |
 | Hosted application | Not deployed yet |
-| Public GitHub repository | Add the repository URL after pushing |
+| Public GitHub repository | [anugrahks19/StrideGrid](https://github.com/anugrahks19/StrideGrid) |
 | Software Requirements Specification | [SRS Word document](reports/StrideGrid_Software_Requirements_Specification.docx) · [requirements draft](docs/SRS.md) |
 | Project report | [Capstone report](reports/StrideGrid_Capstone_Project_Report.docx) |
 
@@ -207,7 +207,7 @@ Unit tests cover map cell conversion, route coverage, plausible and implausible 
 ## Submission checklist
 
 - [x] Prepare the SRS document for the course assignment
-- [ ] Create and share a public GitHub repository
+- [x] Create and share a public GitHub repository
 - [ ] Deploy the built app and MongoDB-backed API over HTTPS
 - [ ] Verify core flows on the hosted URL
 - [ ] Add hosted and repository URLs to this README and the report
