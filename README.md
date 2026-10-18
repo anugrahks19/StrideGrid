@@ -40,17 +40,55 @@ Additional views: [Create account](docs/screenshots/register.png) · [Sign in](d
 - Server-side run validation, duplicate detection, and claim/challenge/defend/capture rules.
 - Private run history and public game updates through server-sent events with a 30-second refresh fallback.
 
-## Stack
+## Tech stack
 
-- React and Vite client, with React Leaflet for the map
-- Node.js and Express REST API
-- MongoDB and Mongoose for users, private runs, and territories
-- Browser Geolocation API for foreground run tracking
-- JWT session in an HttpOnly cookie; passwords hashed with bcrypt
+| Layer | Technology | Use in StrideGrid |
+| --- | --- | --- |
+| Frontend | React 19, Vite 6, React Router | Pages, forms, dashboard, navigation, and production build |
+| Map | Leaflet, React Leaflet, OpenStreetMap tiles | Territory map and live route display |
+| Backend | Node.js, Express 4 | JSON API, route validation, scoring, authentication, and live events |
+| Database | MongoDB, Mongoose 8 | Users, private runs, and territory cells |
+| Location | Browser Geolocation API | Foreground GPS samples after the runner grants permission |
+| Authentication | bcrypt, JWT, HttpOnly cookie | Password hashing and signed sessions |
 
-The game, data, API, and user interface are MERN. Leaflet displays the map; it is not an additional application backend.
+The application logic and persistent data use the MERN stack. Leaflet renders the map; it is not another application backend.
 
-The React client sends requests to Express; only the API reads and writes MongoDB. Mongoose stores three main collections: `User` (account and password hash), `Run` (owner, private GPS points, distance, duration, outcomes), and `Territory` (unique cell, owner, optional challenger and challenge expiry).
+## Architecture
+
+```mermaid
+flowchart LR
+    Runner[Runner] --> Client[React browser app]
+    GPS[Browser Geolocation API] --> Client
+    Tiles[OpenStreetMap tiles] --> Client
+    Client -->|JSON requests and session cookie| API[Node and Express API]
+    Client -->|EventSource connection| API
+    API -->|Run completed event| Client
+    API -->|Mongoose queries and updates| DB[(MongoDB)]
+```
+
+The browser calls Express; it never connects to MongoDB directly. Express serves the built React app in production. The server has separate routes for authentication and game data, reusable GPS and territory logic, and three Mongoose models: `User` (account), `Run` (private route and outcomes), and `Territory` (cell owner and optional challenger). Public map and leaderboard endpoints expose summaries; `/api/runs` is limited to the signed-in runner.
+
+## Data flow
+
+**Account flow:** The registration or sign-in form sends credentials to `/api/auth`. Express validates the request, looks up or creates a `User`, and sets a signed JWT in an HttpOnly cookie. The client calls `/api/auth/me` on reload to restore the session. Protected pages and run endpoints require that cookie.
+
+**Run and territory flow:**
+
+```mermaid
+flowchart TD
+    A[Runner starts a run] --> B[Browser records GPS samples]
+    B --> C[React submits points to POST /api/runs]
+    C --> D[Express checks session and validates route]
+    D -->|Invalid or duplicate| E[Return 400 or 409 without scoring]
+    D -->|Qualifying route| F[Save private Run as processing]
+    F --> G[Map measured samples to territory cells]
+    G --> H[Claim, challenge, defend, or capture cells]
+    H --> I[Mark Run completed and return counts]
+    I --> J[Announce run completed event]
+    J --> K[Clients refresh map, dashboard, and leaderboard]
+```
+
+The server filters unreliable or implausible samples, checks the route hash for an exact repeat, and scores only measured locations. Each accepted cell update is stored in MongoDB; the completed run stores distance, duration, and outcome counts. Raw GPS samples stay in the private run record and are not sent through public territory, activity, or leaderboard endpoints. Open clients receive a server-sent event and fetch fresh public data; a 30-second poll provides a fallback.
 
 ## MVP rules
 
@@ -72,7 +110,7 @@ npm ci
 npm run dev
 ```
 
-Open `http://localhost:5173`. Vite proxies `/api` to Express on port 5000. For production, copy the example environment files, set `MONGODB_URI` in `server/.env`, and replace `JWT_SECRET` with a random secret of at least 24 characters.
+Open `http://localhost:5173`. Vite proxies `/api` to Express on port 5000. To use your own MongoDB locally, copy the example environment files, set `MONGODB_URI` in `server/.env`, and replace `JWT_SECRET` with a random secret of at least 24 characters.
 
 ```powershell
 Copy-Item server/.env.example server/.env
@@ -100,9 +138,19 @@ npm run build
 npm start
 ```
 
-In production Express serves the built React app from the same origin. Configure `MONGODB_URI`, `JWT_SECRET`, `NODE_ENV=production`, and `PORT` on the host. Serve the app over HTTPS: browsers require a secure context and user permission for Geolocation. Test a full run on the deployed URL; localhost UI testing alone does not verify GPS behavior.
+In production Express serves the built React app from the same origin. Serve it over HTTPS: browsers require a secure context and user permission for Geolocation. Test a full run on the deployed URL; localhost UI testing alone does not verify GPS behavior.
 
-For a same-origin deployment, the production sequence is: provision MongoDB, set the server environment variables on a host that can run Node.js, install dependencies with `npm ci`, build with `npm run build`, and start with `npm start`. Express serves `client/dist` and provides a fallback for React routes such as `/dashboard`. If you host the frontend separately, set `VITE_API_URL` to the deployed API URL and `CLIENT_ORIGIN` to the exact frontend origin, then test cookie-based sign in and the live event stream on the hosted URLs.
+### Suggested hosting setup
+
+Use **one Render Node web service for the client and API**, plus **MongoDB Atlas for the database**. This matches the current same-origin cookie and live-event design. Vercel alone is not a drop-in target for this app: its Express support runs as a function and does not use this project's `express.static()` setup, while the event stream expects a long-lived server connection. See the [Render Express guide](https://render.com/docs/deploy-node-express-app), [Vercel Express documentation](https://vercel.com/docs/frameworks/backend/express), and [Atlas connection guide](https://www.mongodb.com/docs/atlas/connect-to-database-deployment/).
+
+1. Create an Atlas cluster and database user. Copy the application connection string and configure Atlas network access for the web service; keep the URI private. Atlas documents its [IP access list](https://www.mongodb.com/docs/atlas/security/ip-access-list/).
+2. Push this repository to GitHub. In Render, create a **Web Service** connected to that repository, with the repository root as the working directory.
+3. Set **Build Command** to `npm ci --include=dev && npm run build` and **Start Command** to `npm start`. Vite is a development dependency needed during the build even when `NODE_ENV=production` is configured.
+4. Set Render environment variables: `NODE_ENV=production`, `MONGODB_URI` to the Atlas connection string, and `JWT_SECRET` to a new random secret of at least 24 characters. Render supplies `PORT`; the server already reads it. Keep `VITE_API_URL` at its `/api` default and leave `CLIENT_ORIGIN` unset for this same-origin setup.
+5. Open the Render HTTPS URL, check `/api/health`, then test registration, sign in, dashboard refresh, the map, and a genuine outdoor qualifying run on a phone. Add that URL to the project links above and to the capstone report.
+
+Render's web service provides an HTTPS `onrender.com` URL and can redeploy from GitHub. Hosting the frontend separately would require code changes for the hard-coded `/api/events` connection and a review of cross-origin cookie behavior; the instructions above avoid those changes. See [Render web services](https://render.com/docs/web-services).
 
 ## API
 
