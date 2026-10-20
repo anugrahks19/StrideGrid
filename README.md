@@ -6,13 +6,13 @@ StrideGrid is a MERN capstone project that turns outdoor runs into a territory g
 
 The public landing page introduces the game through an animated feature section, a live map preview, and a clear start flow. Personal territory, distance, and defense statistics appear after sign-in on the dashboard.
 
-**Current status:** The first playable version and signed-in dashboard are implemented. Local development can run without an external MongoDB service; production needs a MongoDB connection and a real outdoor GPS test. No hosted URL is available yet.
+**Current status:** The first playable version and signed-in dashboard are implemented. The application is deployed over HTTPS with MongoDB Atlas. The public landing page and API health/leaderboard endpoints respond; a real outdoor GPS run and the two-runner territory flow still need verification on the hosted site.
 
 ## Project links
 
 | Item | Link or status |
 | --- | --- |
-| Hosted application | Not deployed yet |
+| Hosted application | [stridegrid.onrender.com](https://stridegrid.onrender.com/) |
 | Public GitHub repository | [anugrahks19/StrideGrid](https://github.com/anugrahks19/StrideGrid) |
 | Software Requirements Specification | [SRS Word document](reports/StrideGrid_Software_Requirements_Specification.docx) · [requirements draft](docs/SRS.md) |
 | Project report | [Capstone report](reports/StrideGrid_Capstone_Project_Report.docx) |
@@ -208,9 +208,9 @@ Unit tests cover map cell conversion, route coverage, plausible and implausible 
 
 - [x] Prepare the SRS document for the course assignment
 - [x] Create and share a public GitHub repository
-- [ ] Deploy the built app and MongoDB-backed API over HTTPS
+- [x] Deploy the built app and MongoDB-backed API over HTTPS
 - [ ] Verify core flows on the hosted URL
-- [ ] Add hosted and repository URLs to this README and the report
+- [x] Add hosted and repository URLs to this README and the report
 - [x] Capture the current overview, registration, sign-in, dashboard, map, leaderboard, and history views
 - [ ] Capture an active run, result, populated gameplay, and mobile views after real testing
 - [x] Prepare the project report using the course's required format
