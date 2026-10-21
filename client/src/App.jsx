@@ -60,7 +60,7 @@ function Shell({ user, authLoading, onLogout, logoutError, children }) {
         </div>
       </div>
     </header>
-    <main>{logoutError && <div className="page-container"><div className="notice error session-notice" role="alert">{logoutError}</div></div>}{children}</main>
+    <main>{user?.isDemo && <div className="page-container"><div className="demo-banner"><strong>Evaluator demo</strong><span>Sample runs and territory are shown for preview. Run recording is disabled in this account.</span></div></div>}{logoutError && <div className="page-container"><div className="notice error session-notice" role="alert">{logoutError}</div></div>}{children}</main>
     <footer className="site-footer"><div className="footer-inner"><Brand /><span>Every route has a story. Make yours count.</span><span>© {new Date().getFullYear()} StrideGrid</span></div></footer>
   </div>;
 }
@@ -160,6 +160,7 @@ function Explore({ user, territories, refresh }) {
   };
   const startRun = () => {
     if (!user) return navigate('/login', { state: { from: location.pathname } });
+    if (user.isDemo) return setMessage('Demo access is read-only. Sign out and create your own account to record a run.');
     if (!navigator.geolocation) return setMessage('This browser does not support location tracking.');
     setPoints([]); pointsRef.current = []; startedAtRef.current = Date.now(); setElapsed(0); setResult(null); setMessage('Waiting for your first GPS point…');
     watchRef.current = navigator.geolocation.watchPosition((position) => {
@@ -207,8 +208,8 @@ function Explore({ user, territories, refresh }) {
     <div className="explore-layout"><div className="explore-map-panel"><TerritoryMap territories={territories} points={points} center={mapCenter} userId={user?.id} height="590px" /><div className="map-legend"><span><i className="legend-mine" /> Your cells</span><span><i className="legend-others" /> Other runners</span><span><i className="legend-contested" /> Contested</span></div></div>
       <aside className="explore-sidebar"><div className="sidebar-heading"><span className="eyebrow">RUN CONTROL</span><h2>Make your move.</h2><p>Keep this page open while you run. Qualifying runs need at least 1 km and 8 minutes.</p></div>
         <div className="run-panel"><div className="run-panel-top"><span className={active ? 'status-dot active' : 'status-dot'} />{active ? 'LIVE RUN IN PROGRESS' : 'READY TO RUN'}</div><div className="run-live-metric"><strong>{points.length}</strong><span>GPS points recorded</span></div>{active && <div className="tracker-live-stats"><span><Timer size={15} /> {formatDuration(elapsed)}</span><span><Footprints size={15} /> {formatDistance(trackDistance(points))}</span></div>}{points.length > 0 && <small className="accuracy-note">Latest accuracy: ±{Math.round(points.at(-1).accuracy)} m</small>}
-          {active ? <button className="button button-stop" onClick={finishRun} disabled={submitting}><Square size={17} fill="currentColor" /> Finish run</button> : <button className="button button-primary full" onClick={startRun} disabled={submitting}><Play size={17} fill="currentColor" /> {submitting ? 'Saving run…' : 'Start run'}</button>}
-          <span className="run-help">{active ? 'Move outdoors with a clear GPS signal.' : 'Location permission is requested when you start.'}</span>
+          {active ? <button className="button button-stop" onClick={finishRun} disabled={submitting}><Square size={17} fill="currentColor" /> Finish run</button> : <button className="button button-primary full" onClick={startRun} disabled={submitting || user?.isDemo}><Play size={17} fill="currentColor" /> {user?.isDemo ? 'Demo preview only' : submitting ? 'Saving run…' : 'Start run'}</button>}
+          <span className="run-help">{user?.isDemo ? 'Sample territory is shown for evaluation. Sign out to create a runner account.' : active ? 'Move outdoors with a clear GPS signal.' : 'Location permission is requested when you start.'}</span>
         </div><div className="sidebar-stats"><div><Flag size={18}/><span>Your territory</span><strong>{user ? mine : '—'}</strong></div><div><Swords size={18}/><span>Contested cells</span><strong>{contested}</strong></div></div>
         <div className="privacy-card"><Shield size={19} /><div><strong>Your routes stay private.</strong><p>Other runners see coarse territory spots, not your exact GPS trail.</p></div></div>
       </aside></div></div>;
@@ -221,8 +222,8 @@ function Leaderboard({ leaders, loading, error, onRetry, user }) {
     </div><div className="leaderboard-footnote"><Flag size={17} /> Rankings count currently owned territory cells.</div></div>;
 }
 
-function Runs({ runs, loading, error, onRetry }) {
-  return <div className="inner-page page-container narrow-page"><div className="page-title-row"><div><span className="eyebrow">YOUR JOURNEY</span><h1>My runs<span>.</span></h1><p>Every route you’ve put on the map, all in one place.</p></div><Link to="/explore" className="button button-primary"><Play size={16} fill="currentColor" /> New run</Link></div>
+function Runs({ runs, loading, error, onRetry, user }) {
+  return <div className="inner-page page-container narrow-page"><div className="page-title-row"><div><span className="eyebrow">YOUR JOURNEY</span><h1>My runs<span>.</span></h1><p>Every route you’ve put on the map, all in one place.</p></div><Link to="/explore" className="button button-primary"><Play size={16} fill="currentColor" /> {user?.isDemo ? 'View sample map' : 'New run'}</Link></div>
     {loading ? <div className="empty-state panel">Loading your runs…</div> : error ? <div className="notice error">{error} <button onClick={onRetry}>Retry</button></div> : runs.length ? <div className="runs-list">{runs.map((run) => <div className="run-card" key={run._id}><div className="run-card-icon"><Footprints size={24}/></div><div className="run-card-main"><span>{formatDate(run.startedAt)}</span><h3>{formatDistance(run.distanceMeters)} run</h3><small><Timer size={14}/>{formatDuration(run.durationSeconds)} · {run.claimedCount} claimed · {run.capturedCount} captured · {run.defendedCount} defended</small></div><ChevronRight size={18}/></div>)}</div> : <div className="empty-state panel"><Footprints size={36}/><h3>Your first run is waiting.</h3><p>Head to the map, hit start, and claim your first grid.</p><Link to="/explore" className="button button-primary">Explore the map <ArrowRight size={17}/></Link></div>}</div>;
 }
 
@@ -252,6 +253,14 @@ function AuthPage({ mode }) {
     } catch (caught) { setError(caught.message); }
     finally { setBusy(false); }
   };
+  const openDemo = async () => {
+    if (busy) return;
+    setError(''); setBusy(true);
+    try {
+      await api('/auth/demo', { method: 'POST' });
+      window.location.replace('/dashboard');
+    } catch (caught) { setError(caught.message); setBusy(false); }
+  };
   return <div className="auth-page"><div className="auth-side"><img className="auth-side-photo" src="/images/auth-runner.webp" alt="Runner on a tree-lined city street at sunrise" /><div className="auth-side-content"><span className="eyebrow">A DIFFERENT WAY TO RUN</span><h2>Every street<br />is a <em>start line.</em></h2><p>Lace up. Go further. Make the map yours.</p></div></div><div className="auth-form-side"><div className="auth-form-wrap"><span className="eyebrow">WELCOME TO STRIDEGRID</span><h1>{isRegister ? 'Create your account.' : 'Good to see you again.'}</h1><p>{isRegister ? 'Your next run could change the map.' : 'Sign in to pick up where you left off.'}</p>
       {error && <div className="notice error" role="alert">{error}</div>}
       <form onSubmit={submit}>{isRegister && <label>Full name<input required minLength="2" maxLength="40" autoComplete="name" value={form.name} onChange={update('name')} placeholder="Your name" /></label>}
@@ -259,7 +268,7 @@ function AuthPage({ mode }) {
         <label>Password<span className="password-field"><input required type={showPassword ? 'text' : 'password'} minLength={isRegister ? 8 : undefined} autoComplete={isRegister ? 'new-password' : 'current-password'} value={form.password} onChange={update('password')} placeholder={isRegister ? 'At least 8 characters' : 'Your password'} /><button type="button" className="password-toggle" onClick={() => setShowPassword((shown) => !shown)} aria-label={showPassword ? 'Hide password' : 'Show password'}>{showPassword ? <EyeOff size={18}/> : <Eye size={18}/>}</button></span></label>
         {isRegister && <label>Confirm password<input required type={showPassword ? 'text' : 'password'} autoComplete="new-password" value={form.confirmPassword} onChange={update('confirmPassword')} aria-invalid={Boolean(error && form.password !== form.confirmPassword)} placeholder="Enter password again" /></label>}
         <button className="button button-primary full" disabled={busy}>{busy ? 'Please wait…' : isRegister ? 'Create account' : 'Sign in'} <ArrowRight size={18}/></button>
-      </form><div className="auth-switch">{isRegister ? 'Already have an account?' : 'New to StrideGrid?'} <Link to={isRegister ? '/login' : '/register'} state={{ from: destination }}>{isRegister ? 'Sign in' : 'Create an account'}</Link></div>
+      </form>{!isRegister && <div className="demo-access"><span>Reviewing the project?</span><button type="button" onClick={openDemo} disabled={busy}>Explore the evaluator demo <ArrowRight size={16} /></button><small>One click opens a read-only account with sample runs, territory, and leaderboard data.</small></div>}<div className="auth-switch">{isRegister ? 'Already have an account?' : 'New to StrideGrid?'} <Link to={isRegister ? '/login' : '/register'} state={{ from: destination }}>{isRegister ? 'Sign in' : 'Create an account'}</Link></div>
     </div></div></div>;
 }
 
@@ -313,7 +322,7 @@ export default function App() {
     <Route path="/dashboard" element={authLoading ? <div className="page-container inner-page">Loading your space…</div> : user ? <Dashboard user={user} territories={territories} leaders={leaders} runs={runs} activity={activity} loading={loading} error={error} live={live} onRetry={() => refresh()} /> : <Navigate to="/login" replace state={{ from: location.pathname }} />} />
     <Route path="/explore" element={<Explore user={user} territories={territories} refresh={() => refresh()} />} />
     <Route path="/leaderboard" element={<Leaderboard leaders={leaders} loading={loading} error={error} onRetry={() => refresh()} user={user} />} />
-    <Route path="/runs" element={authLoading ? <div className="page-container inner-page">Loading your space…</div> : user ? <Runs runs={runs} loading={loading} error={error} onRetry={() => refresh()} /> : <Navigate to="/login" replace state={{ from: location.pathname }} />} />
+    <Route path="/runs" element={authLoading ? <div className="page-container inner-page">Loading your space…</div> : user ? <Runs runs={runs} loading={loading} error={error} onRetry={() => refresh()} user={user} /> : <Navigate to="/login" replace state={{ from: location.pathname }} />} />
     <Route path="/login" element={authLoading ? <div className="page-container inner-page">Checking your session…</div> : user ? <Navigate to="/dashboard" replace /> : <AuthPage mode="login" />} />
     <Route path="/register" element={authLoading ? <div className="page-container inner-page">Checking your session…</div> : user ? <Navigate to="/dashboard" replace /> : <AuthPage mode="register" />} />
     <Route path="*" element={<div className="inner-page page-container"><div className="empty-state panel"><Compass size={36}/><h2>That route doesn’t exist.</h2><Link to="/" className="button button-primary">Back home <ArrowRight size={17}/></Link></div></div>} />

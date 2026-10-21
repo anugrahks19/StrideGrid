@@ -10,6 +10,7 @@ import { randomBytes } from 'node:crypto';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import authRoutes from './routes/auth.js';
 import gameRoutes from './routes/game.js';
+import { ensureDemoUser } from './lib/demo.js';
 
 const app = express();
 app.disable('x-powered-by');
@@ -64,6 +65,7 @@ async function start() {
     throw new Error('Set MONGODB_URI and a JWT_SECRET of at least 24 characters.');
   }
   await mongoose.connect(mongoUri);
+  await ensureDemoUser();
   app.listen(port, () => console.log(`StrideGrid server listening on port ${port}`));
 }
 

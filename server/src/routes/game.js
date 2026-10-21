@@ -3,10 +3,11 @@ import { createHash } from 'node:crypto';
 import Territory from '../models/Territory.js';
 import Run from '../models/Run.js';
 import User from '../models/User.js';
-import { requireAuth } from '../middleware/auth.js';
+import { optionalAuth, requireAuth } from '../middleware/auth.js';
 import { cellBounds, routeCells, validateRun } from '../lib/geo.js';
 import { nextTerritory } from '../lib/territory.js';
 import { announceRun, liveEvents } from '../lib/live.js';
+import { demoData } from '../lib/demo.js';
 
 const router = Router();
 router.get('/events', liveEvents);
@@ -36,8 +37,9 @@ async function applyVisit(cell, runnerId, now) {
   throw new Error('Territory changed while the run was being processed. Please retry.');
 }
 
-router.get('/territories', async (req, res, next) => {
+router.get('/territories', optionalAuth, async (req, res, next) => {
   try {
+    if (req.user?.isDemo) return res.json({ territories: demoData(req.user.id).territories });
     const docs = await Territory.find().select('-__v').populate('owner', 'name').populate('challenger', 'name').limit(5000);
     res.json({ territories: docs.map((doc) => ({
       key: doc.key,
@@ -51,8 +53,9 @@ router.get('/territories', async (req, res, next) => {
   } catch (error) { next(error); }
 });
 
-router.get('/leaderboard', async (_req, res, next) => {
+router.get('/leaderboard', optionalAuth, async (req, res, next) => {
   try {
+    if (req.user?.isDemo) return res.json({ leaders: demoData(req.user.id).leaders });
     const leaders = await Territory.aggregate([
       { $group: { _id: '$owner', cells: { $sum: 1 } } },
       { $sort: { cells: -1 } }, { $limit: 10 },
@@ -65,8 +68,9 @@ router.get('/leaderboard', async (_req, res, next) => {
   } catch (error) { next(error); }
 });
 
-router.get('/activity', async (_req, res, next) => {
+router.get('/activity', optionalAuth, async (req, res, next) => {
   try {
+    if (req.user?.isDemo) return res.json({ activity: demoData(req.user.id).activity });
     const runs = await Run.find({ status: 'completed' })
       .sort({ endedAt: -1 }).limit(8)
       .select('runner claimedCount contestedCount capturedCount defendedCount endedAt')
@@ -85,6 +89,7 @@ router.get('/activity', async (_req, res, next) => {
 
 router.get('/runs', requireAuth, async (req, res, next) => {
   try {
+    if (req.user.isDemo) return res.json({ runs: demoData(req.user.id).runs });
     const runs = await Run.find({ runner: req.user._id, status: 'completed' }).sort({ startedAt: -1 }).limit(30);
     res.json({ runs });
   } catch (error) { next(error); }
@@ -92,6 +97,7 @@ router.get('/runs', requireAuth, async (req, res, next) => {
 
 router.post('/runs', requireAuth, async (req, res, next) => {
   try {
+    if (req.user.isDemo) return res.status(403).json({ error: 'Demo access is read-only. Create your own account to record a run.' });
     let validated;
     try { validated = validateRun(req.body.points); }
     catch (error) { return res.status(400).json({ error: error.message }); }

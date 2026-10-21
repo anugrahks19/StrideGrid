@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken';
 import rateLimit from 'express-rate-limit';
 import User from '../models/User.js';
 import { requireAuth } from '../middleware/auth.js';
+import { DEMO_EMAIL } from '../lib/demo.js';
 
 const router = Router();
 const authLimiter = rateLimit({ windowMs: 15 * 60_000, limit: 20, standardHeaders: 'draft-7', legacyHeaders: false });
@@ -46,6 +47,15 @@ router.post('/login', authLimiter, async (req, res, next) => {
     if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
       return res.status(401).json({ error: 'Email or password is incorrect.' });
     }
+    setSession(res, user);
+    return res.json({ user: user.toPublicJSON() });
+  } catch (error) { next(error); }
+});
+
+router.post('/demo', authLimiter, async (_req, res, next) => {
+  try {
+    const user = await User.findOne({ email: DEMO_EMAIL, isDemo: true });
+    if (!user) return res.status(503).json({ error: 'The evaluator demo is temporarily unavailable.' });
     setSession(res, user);
     return res.json({ user: user.toPublicJSON() });
   } catch (error) { next(error); }

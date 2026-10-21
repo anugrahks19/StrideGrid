@@ -8,6 +8,8 @@ The public landing page introduces the game through an animated feature section,
 
 **Current status:** The first playable version and signed-in dashboard are implemented. The application is deployed over HTTPS with MongoDB Atlas. The public landing page and API health/leaderboard endpoints respond; a real outdoor GPS run and the two-runner territory flow still need verification on the hosted site.
 
+**Evaluator access:** Open the [sign-in page](https://stridegrid.onrender.com/login) and select **Explore the evaluator demo**. This creates a read-only demo session with clearly labeled sample runs, territory, activity, and leaderboard data. No password is needed. The demo data is generated for preview and is separate from real MongoDB run and territory records; it is not evidence of a completed GPS run. Sign out and create a normal account to test recording.
+
 ## Project links
 
 | Item | Link or status |
@@ -158,6 +160,7 @@ Render's web service provides an HTTPS `onrender.com` URL and can redeploy from 
 | --- | --- | --- | --- |
 | POST | `/api/auth/register` | Create runner account | No |
 | POST | `/api/auth/login` | Start session | No |
+| POST | `/api/auth/demo` | Open read-only evaluator demo session | No |
 | POST | `/api/auth/logout` | End session | No |
 | GET | `/api/auth/me` | Current runner | Yes |
 | GET | `/api/territories` | Public territory cells | No |
@@ -168,7 +171,7 @@ Render's web service provides an HTTPS `onrender.com` URL and can redeploy from 
 | POST | `/api/runs` | Submit, validate, and score a run | Yes |
 | GET | `/api/health` | API health | No |
 
-Successful run submission returns distance, duration, and counts of claimed, contested, captured, and defended cells. Validation errors return `400`; missing auth returns `401`; a duplicate route returns `409`. After sign-in, runners land on `/dashboard`. A completed run announces an event so open dashboards can refresh; a 30-second poll provides a fallback.
+Successful run submission returns distance, duration, and counts of claimed, contested, captured, and defended cells. Validation errors return `400`; missing auth returns `401`; demo run submissions return `403`; a duplicate route returns `409`. After sign-in, runners land on `/dashboard`. A completed run announces an event so open dashboards can refresh; a 30-second poll provides a fallback.
 
 `POST /api/runs` accepts a JSON object with a `points` array. Each point has `lat`, `lng`, `accuracy` (meters), and `timestamp` (Unix milliseconds). A real request needs a qualifying sequence, not a single point. API errors use `{ "error": "message" }`; routes marked as authenticated use the session cookie.
 

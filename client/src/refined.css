@@ -228,6 +228,14 @@ h1, h2, h3 { color: #203b31; letter-spacing: -.052em; }
 .password-toggle:hover, .password-toggle:focus-visible { background: #eef5e9; color: #315d3e; }
 .session-notice { margin: 18px 0 0; }
 .auth-switch a { color: #52805b; }
+.demo-access { margin-top: 22px; padding: 18px; border: 1px solid #dce8d8; border-radius: 13px; background: #eef5e9; display: grid; gap: 8px; }
+.demo-access > span { color: #53725a; font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.demo-access button { display: flex; align-items: center; justify-content: space-between; width: 100%; padding: 11px 0; color: #234e34; background: transparent; border: 0; border-bottom: 1px solid #d7e5d1; font-weight: 800; text-align: left; }
+.demo-access button:hover { color: #4d8656; }
+.demo-access button:disabled { cursor: wait; opacity: .6; }
+.demo-access small { color: #728b76; line-height: 1.5; }
+.demo-banner { display: flex; align-items: center; gap: 12px; margin-top: 20px; padding: 12px 16px; border: 1px solid #d6e6ca; border-radius: 11px; background: #eef6e7; color: #4c7151; font-size: 12px; line-height: 1.4; }
+.demo-banner strong { color: #27543a; white-space: nowrap; }
 @keyframes card-float { 0%, 100% { transform: rotate(2deg) translateY(0); } 50% { transform: rotate(1deg) translateY(-7px); } }
 @keyframes trail-glow { 0%, 100% { opacity: .65; } 50% { opacity: 1; } }
 @keyframes pin-bob { 0%, 100% { translate: 0 0; } 50% { translate: 0 -6px; } }
@@ -240,6 +248,7 @@ h1, h2, h3 { color: #203b31; letter-spacing: -.052em; }
 }
 
 @media (max-width: 700px) {
+  .demo-banner { align-items: flex-start; flex-direction: column; gap: 3px; }
   .site-header { height: 66px; }
   .main-nav { top: 66px; background: #fbfaf6; }
   .main-nav .mobile-logout { display: inline-flex; align-items: center; gap: 10px; width: 100%; padding: 13px 0; border: 0; border-top: 1px solid #e4eae0; background: transparent; color: #486b54; font-size: 13px; font-weight: 700; text-align: left; }

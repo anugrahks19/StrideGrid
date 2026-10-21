@@ -75,7 +75,7 @@ export default function Dashboard({ user, territories, leaders, runs, activity, 
         <h1>{greeting()}, {user.name.split(' ')[0]} <span className="wave" aria-hidden="true">✳</span></h1>
         <p>Here’s what’s happening on your grid today.</p>
       </div>
-      <Link to="/explore" className="button button-primary"><Play size={16} fill="currentColor" /> Start a run</Link>
+      <Link to="/explore" className="button button-primary"><Play size={16} fill="currentColor" /> {user.isDemo ? 'Explore sample map' : 'Start a run'}</Link>
     </div>
 
     {error && <div className="notice error">{error} <button onClick={onRetry}>Retry</button></div>}
@@ -95,7 +95,7 @@ export default function Dashboard({ user, territories, leaders, runs, activity, 
       </section>
 
       <div className="dashboard-side-stack">
-        <section className="dash-panel dash-quickstart"><div className="quickstart-orbit orbit-a" /><div className="quickstart-orbit orbit-b" /><span className="eyebrow">NEXT UP</span><div className="quickstart-icon"><MapPinned size={28} /></div><h2>Your next route is waiting.</h2><p>Head out, record a run, and see your territory grow in real time.</p><Link to="/explore" className="button button-primary">Open run tracker <ArrowRight size={17} /></Link></section>
+        <section className="dash-panel dash-quickstart"><div className="quickstart-orbit orbit-a" /><div className="quickstart-orbit orbit-b" /><span className="eyebrow">{user.isDemo ? 'SAMPLE PREVIEW' : 'NEXT UP'}</span><div className="quickstart-icon"><MapPinned size={28} /></div><h2>{user.isDemo ? 'See the territory game.' : 'Your next route is waiting.'}</h2><p>{user.isDemo ? 'Explore sample claims and a contested cell on the map.' : 'Head out, record a run, and see your territory grow in real time.'}</p><Link to="/explore" className="button button-primary">{user.isDemo ? 'Explore sample map' : 'Open run tracker'} <ArrowRight size={17} /></Link></section>
         <section className="dash-panel dash-rhythm"><div className="dash-panel-heading"><div><span className="eyebrow">LAST 7 DAYS</span><h2>Your rhythm</h2></div><Activity size={20} /></div><div className="rhythm-chart" aria-label="Distance run each day in the last week">{bars.map((bar, index) => <div className="rhythm-day" key={`${bar.label}-${index}`} title={`${bar.label}: ${(bar.meters / 1000).toFixed(1)} km`}><div className="rhythm-track"><span style={{ '--bar-height': `${bar.meters ? Math.max(8, Math.round(bar.meters / maxBar * 100)) : 0}%`, '--bar-delay': `${index * 65}ms` }} /></div><small>{bar.label.slice(0, 2)}</small></div>)}</div><p>Small steps still count. Keep your streak going.</p></section>
       </div>
     </div>
