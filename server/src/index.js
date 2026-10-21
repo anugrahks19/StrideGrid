@@ -13,7 +13,11 @@ import gameRoutes from './routes/game.js';
 
 const app = express();
 app.disable('x-powered-by');
-app.use(helmet({ contentSecurityPolicy: false }));
+app.use(helmet({
+  contentSecurityPolicy: false,
+  // OSM raster tiles require a Referer; cross-origin requests share only this site's origin.
+  referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+}));
 app.use(express.json({ limit: '250kb' }));
 app.use(cookieParser());
 if (process.env.CLIENT_ORIGIN) {
